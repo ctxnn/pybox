@@ -1,0 +1,52 @@
+<!--meta {"title": "Packages and longer runs", "nav": "Packages and longer runs", "description": "Use numpy, pandas and matplotlib, build an image with your own pinned packages, and give a run up to 30 seconds. All opt-in per run and shown on the receipt.", "lede": "The default box has only Python's standard library and two seconds. When a job needs numpy, pandas, matplotlib or your own packages, or more time, you ask for it on that run, and the receipt shows exactly what you asked for.", "checked": "21 October 2026"}-->
+<h2>Images</h2>
+<table>
+<thead><tr><th></th><th><code>stdlib</code> (default)</th><th><code>data</code></th><th>Your own</th></tr></thead>
+<tbody>
+<tr><td>What's inside</td><td>Python 3.13 and its standard library</td><td>numpy 2.5.4, pandas 3.0.6, matplotlib 3.11.2 and their dependencies</td><td>Exactly the packages in your lock file</td></tr>
+<tr><td>Built by</td><td>Pinned registry digest</td><td><code>pybox setup --yes --with data</code></td><td><code>pybox image build NAME --lock FILE</code></td></tr>
+<tr><td>Memory · processes · CPU</td><td>128 MiB · 32 · half a core</td><td colspan="2">512 MiB · 64 · one core</td></tr>
+<tr><td>Network, Mac files, user, read-only system</td><td colspan="3">Identical: no network, no Mac folders, a non-root user with every special permission removed, a read-only system</td></tr>
+</tbody>
+</table>
+<p>Every image is built from the same pinned Python image. Packages are installed once, inside the VM, by a throwaway build container that has the network. pip may install only the exact wheels named, each matched to its SHA-256 (<code>--require-hashes --only-binary=:all:</code>), so no package code runs during the build. Runs never have the network.</p>
+<p>Before every run, PyBox checks that the box uses the image ID recorded when the image was built, and that this record was made from the current recipe: the one shipped with PyBox for <code>data</code>, or your saved lock file for your own images. If they differ, the run stops and tells you how to rebuild.</p>
+
+<h2>numpy, pandas and matplotlib</h2>
+<figure class="code"><figcaption>Terminal</figcaption><pre><span class="p">$ </span>pybox setup --yes --with data
+<span class="p">$ </span>pybox exec report.py --image data --input sales.csv --output results/</pre></figure>
+<p>Building takes about half a minute. matplotlib draws without a display, and its font cache lives in the box's scratch space, so <code>plt.savefig("/tmp/output/chart.png")</code> works and the chart comes back with <code>--output</code>.</p>
+<figure class="code"><figcaption>A chart made in the box, recorded 21 October 2026</figcaption><pre>  Exit code             0 (ended by itself)
+  Memory peak           73.9 MiB of 512 MiB
+  Files out             1 file(s), 17.2 KiB → chart/</pre></figure>
+
+<h2>Your own packages</h2>
+<p>Write the packages you want, then let <a href="https://docs.astral.sh/uv/">uv</a> pin them, with hashes, for the box's platform:</p>
+<figure class="code"><figcaption>Terminal</figcaption><pre><span class="p">$ </span>printf 'tabulate\nrich\npyyaml\n' &gt; requirements.in
+<span class="p">$ </span>uv pip compile requirements.in --generate-hashes \
+    --python-version 3.13 --python-platform aarch64-manylinux_2_28 -o tools.lock
+<span class="p">$ </span>pybox vm start
+<span class="p">$ </span>pybox image build tools --lock tools.lock
+<span class="p">$ </span>pybox exec job.py --image tools</pre></figure>
+<p>A lock file may contain only exact pins with hashes (<code>name==version --hash=sha256:…</code>), comments and line continuations. Options, index URLs, links, local paths and unpinned names are refused before the VM is touched. Names are 2–31 lowercase letters, digits or <code>-</code>. <code>pybox image list</code> shows every image and whether it still matches its recipe; <code>pybox image rm NAME</code> removes one.</p>
+<div class="callout warn">
+<p><strong>Your packages run inside your box.</strong> They can't reach your Mac or the network, but a package can include code that Python runs at start-up, before PyBox's helper. That doesn't change what's trusted: the receipt's engine and kernel sections come from outside the box. But the receipt notes it for your own images.</p>
+<!--/callout--></div>
+
+<h2>Longer runs</h2>
+<p><code>--timeout</code> accepts up to <strong>30 seconds</strong>, in any image. The default stays 2 s, so anything longer is a deliberate choice recorded on the receipt.</p>
+<ul>
+<li>The backup timer inside the box is always one second longer than your limit.</li>
+<li>The kernel watcher samples every 0.05 s for the first second, then spreads its remaining samples over the rest of the run (64 in all).</li>
+<li>A box still expires 120 seconds after it's labelled, which covers the longest run plus cleanup.</li>
+</ul>
+<p>In a recorded test, a program that slept for 60 seconds with <code>--timeout 30</code> was stopped by PyBox at <strong>30.01 s</strong> and its box was removed. A program that exited with code 3 just before a 10-second deadline kept its own exit code.</p>
+<p>For AI agents, the person configuring the server picks the ceiling: <code>pybox mcp --max-timeout 30 --images stdlib,data,tools</code>. An agent can only ask for less. See <a href="mcp.html">MCP for AI agents</a>.</p>
+
+<h2 id="final-readings">Final readings</h2>
+<p>The kernel watcher reads live counters, and a program that ends between two readings can take its peak with it. In early testing, a program that allocated 300 MiB showed a peak of only 147 MiB. So for opt-in runs (any image other than <code>stdlib</code>, files, or a limit over 2 s) the box's helper waits briefly after the program finishes: 0.12 s, or one sampling gap on longer runs, and never past your deadline. That gives the watcher a reading after the program's work. The same 300 MiB program now shows <strong>327.6 MiB</strong>.</p>
+<p>The default box doesn't use the helper, so it keeps exactly the behaviour behind the restriction and resource evidence. Its receipt still says the final counters are unknown.</p>
+
+<div class="callout limit">
+<p><strong>Limits.</strong> The helper runs as the program's own user, so a program can skip the wait. The receipt then shows the highest value seen, as before, and still calls the final value unknown. 30 seconds is a practical limit for this VM, not a hard real-time guarantee.</p>
+<!--/callout--></div>

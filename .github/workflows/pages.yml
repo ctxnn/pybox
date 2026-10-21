@@ -1,0 +1,47 @@
+# Build the docs site from docs-site/ and publish it with GitHub Pages.
+# Enable once in the repository: Settings → Pages → Source: GitHub Actions.
+# For a custom domain, set the repository variable PYBOX_SITE_URL (e.g. https://pybox.example.com).
+name: Docs site
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs-site/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build
+        env:
+          PYBOX_SITE_URL: ${{ vars.PYBOX_SITE_URL }}
+        run: |
+          if [ -z "$PYBOX_SITE_URL" ]; then unset PYBOX_SITE_URL; fi
+          python docs-site/build.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

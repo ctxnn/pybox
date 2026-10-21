@@ -1,0 +1,80 @@
+<!--meta {"title": "Your first sealed run", "nav": "Your first sealed run", "description": "Start the box, run a program, and read its receipt line by line.", "lede": "Start the box, run one line of Python, and learn to read the receipt it gives back. You'll know how to read every PyBox result after this page.", "checked": "21 October 2026"}-->
+<h2>1. Start the box</h2>
+<figure class="code"><figcaption>Terminal</figcaption><pre><span class="p">$ </span>pybox vm start
+Running and verified.</pre></figure>
+<p>This boots the private VM and checks its settings: no shared folders, no forwarded ports, the pinned image present. If anything is off, PyBox stops the VM again and says why. No other command ever starts the VM for you.</p>
+
+<h2>2. Run a program</h2>
+<p>Give PyBox a file, or <code>-</code> to send the program on standard input:</p>
+<figure class="code"><figcaption>Recorded 21 October 2026 (trimmed)</figcaption><pre><span class="p">$ </span>echo 'print(6*7)' | pybox exec -
+42
+
+PyBox receipt · run 5319e024 · image stdlib · 0.166 s of 2 s
+
+From the container engine  checked before start, read back after
+  Exit code             0 (ended by itself)
+  Settings checked      yes, before the program started
+  Mac folders shared    none
+  Network               none
+  Box                   removed and confirmed gone
+…</pre></figure>
+<p>In about a third of a second, PyBox builds a fresh box, runs the program, removes the box, and prints what the program printed, then a short receipt. The command's exit code is <code>0</code> when the program exited 0. The <a href="cli.html#exit-codes">exit codes</a> tell you at a glance what happened.</p>
+<p>The short receipt is a view. Add <code>--json</code> to get the full record it's built from.</p>
+
+<h2>3. Read the receipt</h2>
+<p>Here's the full record (<code>pybox exec - --json</code>) of a program that printed <code>hello inspection</code>, recorded on 19 October 2026 and trimmed to the parts that matter:</p>
+<figure class="code"><figcaption>Recorded receipt (trimmed)</figcaption><pre>{
+  "configured": {
+    "wall_timeout_s": 2.0, "guest_timer_s": 3.0,
+    "memory_bytes": 134217728, "pids": 32, "cpu_cores": 0.5,
+    "network": "none", "user": "10000:10000", "readonly_root": true
+  },
+  "observed": {
+    "policy_verified_before_start": true,
+    "engine_state": { "Status": "exited", "ExitCode": 0, "OOMKilled": false },
+    "resources": { "status": "COLLECTED", "sample_count": 1, "final_counters_complete": false,
+                   "metrics": { "memory.peak": { "last": 4247552, … }, … } },
+    "termination": { "mechanism": "TARGET_EXIT_OBSERVED", "engine_lifetime_s": 0.074583 }
+  },
+  "capture": {
+    "stdout": "hello inspection\n", "stderr": "", "output_complete": true,
+    "provenance": "target byte streams via bounded Docker attach; untrusted content"
+  },
+  "cleanup": { "status": "REMOVED", "removed": true },
+  "unknown": { "final_resource_counters": true, "exact_termination_cause": true,
+               "absolute_clock_alignment": true }
+}</pre></figure>
+<p>Read it top to bottom as four questions:</p>
+<table>
+<thead><tr><th>Section</th><th>The question it answers</th><th>In this run</th></tr></thead>
+<tbody>
+<tr><td><code>configured</code></td><td>What did PyBox ask for?</td><td>2-second limit, 128 MB, no network, a non-root user, read-only files.</td></tr>
+<tr><td><code>observed</code></td><td>What did the engine and the kernel actually see?</td><td>The settings were verified <em>before</em> starting. The program exited 0 after 0.075 s. Memory peaked around 4 MB.</td></tr>
+<tr><td><code>capture</code></td><td>What did the program say?</td><td><code>hello inspection</code>. This is the program's own output, so it's labelled untrusted.</td></tr>
+<tr><td><code>unknown</code></td><td>What can't PyBox be sure of?</td><td>The exact final memory count, the exact cause of termination, and whether the clocks line up.</td></tr>
+</tbody>
+</table>
+<div class="callout limit">
+<p><strong>Why "unknown" is always there.</strong> PyBox reads memory and CPU counters while the program runs, but the box can vanish between two readings. So it reports the last value it actually saw and says the final one is unknown, instead of quietly calling the last reading final.</p>
+<!--/callout--></div>
+<p>For a field-by-field guide, see <a href="receipt.html">The receipt</a>.</p>
+
+<h2>4. Try something that misbehaves</h2>
+<p>Ask for something the box won't allow and compare the receipts:</p>
+<div class="tabs">
+<div class="tab-panel" data-label="Runs too long">
+<figure class="code"><pre><span class="p">$ </span>printf 'import time\ntime.sleep(8)\n' | pybox exec - --timeout 0.5</pre></figure>
+</div>
+<div class="tab-panel" data-label="Reads your files">
+<figure class="code"><pre><span class="p">$ </span>printf 'print(open("/etc/hosts").read()[:80])\n' | pybox exec -</pre></figure>
+</div>
+<div class="tab-panel" data-label="Uses too much memory">
+<figure class="code"><pre><span class="p">$ </span>printf 'x = bytearray(300 * 1024 * 1024)\n' | pybox exec -</pre></figure>
+</div>
+</div>
+<p>In the first, PyBox stops the program at the deadline: the receipt says <em>stopped by PyBox at the deadline</em> (or <em>cause not established</em> when the clocks can't confirm the order), and the command exits <code>124</code>. The second reads the <em>box's</em> own <code>/etc/hosts</code>, not your Mac's: your files simply aren't there. In the third, the receipt shows <em>Out of memory: reported by the engine</em>.</p>
+<p>Then try the things that make PyBox useful for real work: <a href="files.html">files in and out</a>, and <a href="packages.html">numpy, pandas and longer runs</a>.</p>
+
+<h2>5. Stop the box</h2>
+<figure class="code"><figcaption>Terminal</figcaption><pre><span class="p">$ </span>pybox vm stop</pre></figure>
+<p>Next, see what actually happens during a run: <a href="how-it-works.html">How it works</a>.</p>

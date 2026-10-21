@@ -1,0 +1,36 @@
+<!--meta {"title": "FAQ", "description": "Plain answers to common questions about PyBox.", "lede": "Short, straight answers."}-->
+<h2>Is it safe to run anything in PyBox?</h2>
+<p>It's much safer than running untrusted code directly, and every protection was tested. But no tool can promise safety against every possible attack, and PyBox doesn't. It's a carefully tested research prototype, not a certified sandbox. Don't use it to run hostile code from strangers on the internet on a machine you care about.</p>
+
+<h2>Does it need the internet?</h2>
+<p>Only during setup: <code>pybox setup --yes</code> downloads the VM image and the pinned Python image, and <code>--with data</code> downloads numpy and pandas once. After that, running programs needs no internet, and programs in the box can't reach it.</p>
+
+<h2>Can the program see my files?</h2>
+<p>No folders from your Mac are shared with the box, and PyBox checks that before every run. In a recorded test, a program trying to open a file that exists on the Mac got "no such file". If you want a program to read a file, pass a copy with <code>--input</code>; your original is only read. See <a href="files.html">files in and out</a>.</p>
+
+<h2>What happens if my Mac sleeps mid-run?</h2>
+<p>Sleep pauses the VM, and time inside the box pauses with it. PyBox's deadlines weren't designed or tested around sleep, so treat a run that spanned a sleep with suspicion and read its receipt. The timers are practical limits, not real-time guarantees.</p>
+
+<h2>Does it work on Windows, Linux or Intel Macs?</h2>
+<p>Not yet. Only macOS on Apple Silicon. Everywhere else, PyBox refuses to start the sealed box rather than run without it.</p>
+
+<h2>Can I use numpy or pandas, or install packages?</h2>
+<p>numpy, pandas and matplotlib, yes: build the <a href="packages.html"><code>data</code> image</a> once and pass <code>--image data</code>. For other packages, <a href="packages.html#your-own-packages">build your own image</a> from a lock file with pinned versions and hashes. Installing packages during a run, no. Every run gets a fresh box with no network and a read-only system, and nothing carries over between runs. That's what makes each receipt independent.</p>
+
+<h2>How long can a program run?</h2>
+<p>2 seconds by default, up to 30 if you ask with <code>--timeout</code>. The default stays short so a forgotten loop costs you two seconds, not thirty. For AI agents, the person who configures the server picks the ceiling.</p>
+
+<h2>How fast is it?</h2>
+<p>A whole run, from building a fresh box to removing it, takes about a fifth of a second once the VM is running. See <a href="performance.html">Performance</a>.</p>
+
+<h2>Can I install it with pip?</h2>
+<p>Yes: <code>pipx install pybox-sandbox</code>. (The name <code>pybox</code> was already taken on PyPI.) The command is still <code>pybox</code>, and the Python import is still <code>import pybox</code>. See <a href="install.html">Install</a>.</p>
+
+<h2>Is PyBox a hosted service?</h2>
+<p>No. It runs entirely on your own Mac. There's no account, no server and no telemetry.</p>
+
+<h2>Why does every receipt list "unknowns"?</h2>
+<p>Because some things genuinely can't be measured exactly, like the final memory reading of a box that vanished between two readings. PyBox would rather tell you that than invent a number.</p>
+
+<h2>Who made it?</h2>
+<p>PyBox began as a learning project: what actually happens between "run this" and "here's the result"? Each step was built, tested on real hardware, and written up. The full lab notebook is in the repository's <code>LEARNING.md</code>.</p>

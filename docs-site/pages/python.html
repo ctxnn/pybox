@@ -1,0 +1,56 @@
+<!--meta {"title": "Python API", "description": "Run sealed programs from your own Python code with run_container, and tidy up with cleanup_containers.", "lede": "Two functions cover almost everything: run_container to run a program, cleanup_containers to tidy up.", "checked": "21 October 2026"}-->
+<h2>Run a program</h2>
+<figure class="code"><figcaption>example.py</figcaption><pre>from pybox import run_container
+
+result = run_container("print(6 * 7)", timeout_s=2.0, max_output_bytes=4096)
+record = result.record
+
+if record["cleanup"]["status"] != "REMOVED":
+    print("box not confirmed gone:", record["cleanup"]["status"])
+
+exit_code = record["observed"]["engine_state"].get("ExitCode")   <span class="c"># from the engine</span>
+said = record["capture"]["stdout"]                                <span class="c"># from the program: untrusted</span></pre></figure>
+<p>The VM must already be running (<code>pybox vm start</code>). The function never starts it, never installs anything, and never downloads an image.</p>
+
+<h3>Arguments</h3>
+<table>
+<thead><tr><th>Argument</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td><code>source</code></td><td>A string of Python, at most 65,536 bytes as UTF-8</td></tr>
+<tr><td><code>timeout_s</code></td><td>More than 0, at most 30 (default 2.0)</td></tr>
+<tr><td><code>max_output_bytes</code></td><td>1–65,536 per stream (default 65,536)</td></tr>
+<tr><td><code>image</code></td><td><code>"stdlib"</code> (default) or <code>"data"</code>, once built. <a href="packages.html">Images</a></td></tr>
+<tr><td><code>inputs</code></td><td><code>(name, bytes)</code> pairs copied to <code>/tmp/input/</code>; up to 64 files, 8 MiB. <a href="files.html">Files</a></td></tr>
+<tr><td><code>collect_outputs</code></td><td><code>True</code> to bring back what the program writes to <code>/tmp/output/</code></td></tr>
+</tbody>
+</table>
+<p>Bad arguments raise <code>ValueError</code> before anything happens. Everything else, including "the VM isn't running", comes back inside the result, so you never lose the record of what was attempted.</p>
+
+<h3>What you get back</h3>
+<table>
+<thead><tr><th>Attribute</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>record</code></td><td>The <a href="receipt.html">receipt</a>. Start here</td></tr>
+<tr><td><code>returncode</code></td><td>The program's exit code, only when the engine confirms it; otherwise <code>None</code></td></tr>
+<tr><td><code>stdout</code>, <code>stderr</code></td><td>What the program printed (untrusted)</td></tr>
+<tr><td><code>timed_out</code>, <code>timeouts</code></td><td>Whether a deadline fired, and which</td></tr>
+<tr><td><code>cleanup_status</code>, <code>removed</code></td><td>See <a href="cleanup.html#what-the-statuses-mean">statuses</a></td></tr>
+<tr><td><code>cancelled</code></td><td><code>True</code> if you pressed Ctrl-C; the box was still cleaned up</td></tr>
+<tr><td><code>runner_error</code></td><td>A description of anything that went wrong in PyBox itself</td></tr>
+<tr><td><code>output_files</code></td><td><code>(name, bytes)</code> pairs the program wrote (untrusted, already checked for names and size). Nothing is written to your Mac unless you do it</td></tr>
+<tr><td><code>inputs</code>, <code>outputs</code>, <code>outputs_skipped</code>, <code>outputs_error</code></td><td>What went in and came back: names, sizes and SHA-256s</td></tr>
+</tbody>
+</table>
+
+<h2>Tidy up</h2>
+<figure class="code"><pre>from pybox import cleanup_containers
+
+report = cleanup_containers()
+print(report.found, report.removed, report.pending_attempts, report.admission_allowed)</pre></figure>
+<p>This removes only this installation's expired, stopped boxes. Pass <code>resolve_attempts=["&lt;run id&gt;"]</code> to <a href="cleanup.html#settling-an-unconfirmed-run">settle an unconfirmed run</a>.</p>
+
+<h2>One run at a time</h2>
+<p>PyBox admits one run (or cleanup) at a time per installation, using a lock the operating system releases automatically if your process dies. A second simultaneous call gets <code>"another PyBox run or cleanup holds lifecycle admission"</code> in <code>runner_error</code> instead of waiting.</p>
+
+<h2>The unsealed runner</h2>
+<p><code>pybox.run_file(path, unsafe_local=True)</code> runs a file directly on your Mac, <strong>without</strong> a box. <code>unsafe_local</code> must be exactly <code>True</code> or it refuses. Use it only to learn how supervision works, with your own code.</p>

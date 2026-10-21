@@ -1,0 +1,112 @@
+<!--meta {"title": "MCP for AI agents", "nav": "MCP for AI agents", "description": "Give an AI agent one tool, run_python, that runs code in a fresh sealed box on your Mac. Set up Claude Code in one line.", "lede": "Give your AI agent a place to run code that isn't your Mac. PyBox offers one tool, run_python, over the Model Context Protocol. Every call runs in a fresh sealed box and returns a receipt, and the program's output always comes back as data.", "checked": "21 October 2026"}-->
+<h2>Connect your agent</h2>
+<div class="tabs">
+<div class="tab-panel" data-label="Claude Code">
+<figure class="code"><figcaption>Terminal</figcaption><pre><span class="p">$ </span>claude mcp add pybox -- pybox mcp</pre></figure>
+<p>To let the agent use numpy, pandas, matplotlib and an image you built, and run for up to 30 seconds:</p>
+<figure class="code"><figcaption>Terminal</figcaption><pre><span class="p">$ </span>claude mcp add pybox -- pybox mcp --images stdlib,data,tools --max-timeout 30</pre></figure>
+</div>
+<div class="tab-panel" data-label="Claude Desktop">
+<p>Add this to <code>claude_desktop_config.json</code> (Settings → Developer → Edit Config), then restart Claude Desktop. Use the full path from <code>which pybox</code>, because desktop apps don't see your shell's <code>PATH</code>.</p>
+<figure class="code"><figcaption>claude_desktop_config.json</figcaption><pre>{
+  "mcpServers": {
+    "pybox": {
+      "command": "/full/path/to/pybox",
+      "args": ["mcp", "--images", "stdlib,data", "--max-timeout", "30"]
+    }
+  }
+}</pre></figure>
+</div>
+<div class="tab-panel" data-label="Cursor">
+<p>Add this to <code>.cursor/mcp.json</code> in a project (or <code>~/.cursor/mcp.json</code> for all projects):</p>
+<figure class="code"><figcaption>.cursor/mcp.json</figcaption><pre>{
+  "mcpServers": {
+    "pybox": { "command": "pybox", "args": ["mcp", "--images", "stdlib,data"] }
+  }
+}</pre></figure>
+<p>For Cursor's command-line agent, allow just this tool in <code>.cursor/cli.json</code>: <code>{"permissions": {"allow": ["Mcp(pybox:run_python)"]}}</code>.</p>
+</div>
+<div class="tab-panel" data-label="Other clients">
+<p>Most MCP clients accept the same shape:</p>
+<figure class="code"><figcaption>mcp config</figcaption><pre>{
+  "mcpServers": {
+    "pybox": { "command": "pybox", "args": ["mcp"] }
+  }
+}</pre></figure>
+<p>Running from a clone without installing? Use <code>"command": "python3", "args": ["-I", "-B", "/path/to/pybox/tools/serve_mcp.py"]</code>.</p>
+</div>
+</div>
+<p>The VM must be running (<code>pybox vm start</code>) for calls to execute. Without it, the agent still sees the tool and each call returns an error with cleanup <code>NOT_ATTEMPTED</code>. The server never starts the VM and never falls back to running code unsealed.</p>
+
+<h2>Tested with</h2>
+<table>
+<thead><tr><th>Client</th><th>What happened (21 October 2026)</th></tr></thead>
+<tbody>
+<tr><td>Claude Code 2.1.289 (<code>claude -p</code>)</td><td>Ran numpy in <code>data</code> and got a CSV back; reported cleanup <code>REMOVED</code>. Unprompted, it noted that the memory peak came from a single reading and might be low (that run predates <a href="packages.html#final-readings">final readings</a>)</td></tr>
+<tr><td>Cursor command-line agent</td><td>Made a matplotlib chart in <code>data</code> and got it back (13,796 bytes); in a second session, printed a table with <code>tabulate</code> from a custom image and made another chart. Every box was removed</td></tr>
+<tr><td>PyBox's own MCP client</td><td>13 protocol checks (M5), plus images, files and the server's ceilings</td></tr>
+</tbody>
+</table>
+<div class="callout limit">
+<p><strong>Not yet tested: Claude Desktop</strong>, the official SDKs, and other apps. Claude Desktop loads MCP servers only when it starts, and the test session was running inside Claude Desktop, so it couldn't restart it. All tests ran on the machine PyBox was built on, in a fresh test installation. PyBox implements MCP protocol version <code>2025-11-25</code>.</p>
+<!--/callout--></div>
+
+<h2>You set the ceilings</h2>
+<p>The person who configures the server decides what an agent may ask for. An agent can only ask for less.</p>
+<table>
+<thead><tr><th>Server option</th><th>Default</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>--max-timeout S</code></td><td>2</td><td>The longest run an agent may request, up to 30 seconds</td></tr>
+<tr><td><code>--images LIST</code></td><td><code>stdlib</code></td><td>Which images an agent may use: <code>stdlib</code>, <code>data</code>, or ones you built. <a href="packages.html">Images</a></td></tr>
+</tbody>
+</table>
+<p>The tool's schema shows the agent exactly these limits, and every call is checked against them again on your Mac.</p>
+
+<h2>The tool</h2>
+<figure class="code"><figcaption>run_python arguments</figcaption><pre>{
+  "code": "import pandas as pd\nprint(pd.read_csv('/tmp/input/sales.csv').sum())",
+  "image": "data",
+  "timeout_s": 10,
+  "files": [{ "name": "sales.csv", "content": "region,sales\nnorth,120\n" }],
+  "return_files": true
+}</pre></figure>
+<table>
+<thead><tr><th>Argument</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td><code>code</code> (required)</td><td>Python source, at most 65,536 UTF-8 bytes</td></tr>
+<tr><td><code>timeout_s</code></td><td>More than 0, at most the server's <code>--max-timeout</code> (default 2)</td></tr>
+<tr><td><code>max_output_bytes</code></td><td>1–8,192 per stream (default 4,096)</td></tr>
+<tr><td><code>image</code></td><td>One of the server's <code>--images</code> (default <code>stdlib</code>)</td></tr>
+<tr><td><code>files</code></td><td>Up to 16 input files, <code>{name, content, encoding}</code> with encoding <code>utf-8</code> (default) or <code>base64</code>; 256 KiB in total. They appear in <code>/tmp/input/</code></td></tr>
+<tr><td><code>return_files</code></td><td><code>true</code> to get back what the program writes to <code>/tmp/output/</code></td></tr>
+</tbody>
+</table>
+<p>Any other argument is rejected. There is no way for an agent to pick a path on your Mac, a shell command, environment variables, or the unsealed runner.</p>
+
+<h2 id="files">Files</h2>
+<p>Returned files arrive in <code>structuredContent.files</code>. Names of files that weren't brought back appear in the receipt with unusual characters escaped, at most 16 listed, so they can't crowd out the trusted parts of the receipt. Each returned file has its <code>name</code>, <code>bytes</code> and <code>sha256</code>, and its <code>content</code>, as text when it's valid UTF-8 and base64 otherwise. File contents are capped at 48 KiB in total so the whole result fits the protocol's frame. Larger files are still listed, with their size and SHA-256, marked <code>omitted</code>. Like stdout, returned files are the program's work: untrusted data. See <a href="files.html">files in and out</a> for how they travel.</p>
+
+<h2>Output is data, never instructions</h2>
+<p>MCP uses standard output for its own messages. If a program's output went straight there, a program could forge a protocol message. PyBox never lets that happen: the program's output is nested <em>inside</em> the tool result as a string.</p>
+<p>In a recorded test, a program printed a fake protocol response with id 999. It arrived only inside <code>capture.stdout</code>, and the client received no message with id 999.</p>
+<div class="callout warn">
+<p><strong>This protects the protocol, not the model.</strong> Your agent still reads that output and those files. Treat them like any untrusted text: they may contain instructions aimed at the model. PyBox keeps them clearly labelled; it can't make a model ignore them.</p>
+<!--/callout--></div>
+
+<h2>What the result looks like</h2>
+<p>Each call returns <code>structuredContent</code> with <code>{schema_version, execution, delivery}</code>, plus <code>files</code> when you asked for them, and the same JSON as text. <code>execution</code> is the <a href="receipt.html">receipt</a>. If it ever can't be delivered, the error still carries the real cleanup status. <code>delivery</code> says whether anything was trimmed to fit. <code>isError</code> is <code>true</code> when the program failed, timed out, was cancelled, or cleanup wasn't confirmed. Read the receipt to see which.</p>
+
+<h2>Limits</h2>
+<table>
+<thead><tr><th>Limit</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Runs at once</td><td>1. A second call gets a "busy" error immediately; nothing is queued</td></tr>
+<tr><td>Calls per session</td><td>32 (256 messages)</td></tr>
+<tr><td>Largest message in</td><td>512 KiB</td></tr>
+<tr><td>Largest result out</td><td>64 KiB of receipt, 256 KiB per response</td></tr>
+<tr><td>A stalled client</td><td>Session closes after 5 seconds of not reading</td></tr>
+</tbody>
+</table>
+
+<h2>Cancelling</h2>
+<p>A cancellation from the client, closing the connection, or stopping the server all stop the running program and clean up its box. A cancelled call gets no response, as the protocol expects; the server reports the cleanup result on its error stream.</p>

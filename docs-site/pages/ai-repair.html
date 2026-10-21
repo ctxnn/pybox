@@ -1,0 +1,49 @@
+<!--meta {"title": "AI repair loop", "description": "Let a model propose fixes to a failing program while trusted code keeps control of everything that runs.", "lede": "A model can look at a failing program and propose a fix. In PyBox, the model can only ever propose. Trusted code decides what runs, where, and how much it may spend."}-->
+<h2>How a repair round works</h2>
+<ol class="steps">
+<li><strong>Run the program in a sealed box</strong> and collect its receipt.</li>
+<li><strong>Show the model the program and the feedback</strong>: either just the error output, or the structured receipt.</li>
+<li><strong>Accept exactly one kind of answer:</strong> a complete new version of the program, a short diagnosis, and a cause label. Nothing else.</li>
+<li><strong>Run the new version in a fresh sealed box</strong>, with the same rules as before.</li>
+<li><strong>Stop</strong> when it passes, or after two attempts.</li>
+</ol>
+
+<h2>What the model is allowed to say</h2>
+<figure class="code"><figcaption>The only accepted answer</figcaption><pre>{
+  "action": "revise",
+  "diagnosis": "short explanation, at most 2 KiB",
+  "claimed_cause": "exception",
+  "code": "the complete new program, at most 8 KiB"
+}</pre></figure>
+<p><code>claimed_cause</code> must be one of <code>syntax</code>, <code>exception</code>, <code>logic</code>, <code>wall_timeout</code>, <code>oom</code>, <code>pids</code>, <code>policy</code> or <code>unknown</code>. An answer with any extra field, another action or a cut-off reply is <strong>rejected without running anything</strong>, and it still uses up one of the two attempts.</p>
+<p>In a recorded session, a model added <code>"restart": true</code> and also claimed the program used 256 MB when it used 160 MiB. The whole answer was rejected. The model's next answer was valid and fixed the program.</p>
+
+<h2>Budgets, reserved before spending</h2>
+<table>
+<thead><tr><th>Limit</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Model requests</td><td>At most 16 per batch</td></tr>
+<tr><td>Program runs</td><td>At most 24 per batch</td></tr>
+<tr><td>Attempts per problem</td><td>2</td></tr>
+<tr><td>Running at once</td><td>1</td></tr>
+<tr><td>Time window</td><td>900 s; no new work with under 50 s left</td></tr>
+</tbody>
+</table>
+<p>Every request is written down and saved to disk <em>before</em> it's sent. If a request fails in a way that leaves its cost unknown, its reservation is kept and the batch stops. Unknown never quietly becomes zero, and reported cost is <code>null</code>, not <code>0</code>.</p>
+
+<h2>What the trial showed</h2>
+<p>Four small, deliberately broken programs were repaired with a free NVIDIA-hosted model, once with only the error output and once with the structured receipt as feedback:</p>
+<table>
+<thead><tr><th></th><th>Error output only</th><th>Structured receipt</th></tr></thead>
+<tbody>
+<tr><td>Programs repaired</td><td>4 of 4</td><td>4 of 4</td></tr>
+<tr><td>Model requests</td><td>5</td><td>4</td></tr>
+<tr><td>Prompt tokens</td><td>1,850</td><td>10,973</td></tr>
+</tbody>
+</table>
+<div class="callout limit">
+<p><strong>Four problems is an example, not a benchmark.</strong> The success check compares exact output, which a model could fake by hard-coding the answer. One program's error output contained a planted instruction to "call host_shell" and raise the budgets; the model simply fixed the program. That shows the checked boundary held in these cases. It doesn't prove a model can't be manipulated.</p>
+<!--/callout--></div>
+
+<h2>Using it</h2>
+<p>The controller is in <code>pybox.repair</code> (<code>RepairController</code>, <code>Budget</code>, <code>Limits</code>). The recorded trial was run with <code>tools/evaluate_m6.py</code>, which asks for an NVIDIA API key (kept only in memory, never written to disk or passed into a box), sends real requests to NVIDIA's hosted API, and starts and stops the VM under strict checks. It isn't something to run just to try PyBox out.</p>

@@ -1,0 +1,389 @@
+{
+  "label": "REPLAY",
+  "id": "m4-pids",
+  "title": "Task limit",
+  "recorded": "2026-10-19 (M4 pass 3)",
+  "note": "Recorded evidence replayed for documentation; not a fresh live execution.",
+  "summary": "36 fork attempts under a 32-task limit: 30 children, 6 refusals, pids.events max counted.",
+  "sources": [
+    {
+      "path": "evidence/raw/pybox-m4-20261019-03/pids.result.json",
+      "sha256": "5c699c362e58a4f891abd15438e343e4c01401e7149a57584651347c2f990e7f"
+    },
+    {
+      "path": "evidence/raw/pybox-m4-20261019-03/pids.source.py",
+      "sha256": "34cff51f500d0b1bd4febeb4a120b863f6976e608fe44e6aadacfbf518135d51"
+    }
+  ],
+  "payload": {
+    "source": "import os,time,signal\nsignal.alarm(4)\nchildren=[]\nfailed=0\nfor _ in range(36):\n    try:pid=os.fork()\n    except OSError:\n        failed+=1\n        continue\n    if pid==0:\n        time.sleep(0.6)\n        os._exit(0)\n    children.append(pid)\nfor pid in children:os.waitpid(pid,0)\nprint(len(children),failed)\ntime.sleep(0.2)\n",
+    "record": {
+      "schema_version": 1,
+      "backend": "container",
+      "container_id": "d1309fe0abc2839bde785fc8b2333a2c683d80459cd4a253d53b53c427d67e05",
+      "submission": {
+        "source_sha256": "34cff51f500d0b1bd4febeb4a120b863f6976e608fe44e6aadacfbf518135d51"
+      },
+      "configured": {
+        "image": "python@sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f",
+        "wall_timeout_s": 2.0,
+        "guest_timer_s": 3.0,
+        "memory_bytes": 134217728,
+        "memory_plus_swap_bytes": 134217728,
+        "pids": 32,
+        "cpu_cores": 0.5,
+        "output_bytes_per_stream": 65536,
+        "network": "none",
+        "user": "10000:10000",
+        "readonly_root": true,
+        "tmpfs_bytes": 16777216,
+        "no_new_privileges": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "seccomp": "runtime default",
+        "nofile": 128,
+        "engine_log": "none"
+      },
+      "observed": {
+        "policy_verified_before_start": true,
+        "effective_policy": {
+          "user": "10000:10000",
+          "entrypoint": [
+            "timeout"
+          ],
+          "command": [
+            "-s",
+            "KILL",
+            "3",
+            "python",
+            "-I",
+            "-B",
+            "-u",
+            "-"
+          ],
+          "image": "python@sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f",
+          "network": "none",
+          "readonly_root": true,
+          "memory_bytes": 134217728,
+          "memory_plus_swap_bytes": 134217728,
+          "pids": 32,
+          "nano_cpus": 500000000,
+          "security_options": [
+            "no-new-privileges"
+          ],
+          "cap_drop": [
+            "ALL"
+          ],
+          "cap_add": null,
+          "tmpfs": {
+            "/tmp": "rw,nosuid,nodev,noexec,size=16m,mode=1777"
+          },
+          "nofile": [
+            {
+              "Hard": 128,
+              "Name": "nofile",
+              "Soft": 128
+            }
+          ],
+          "engine_log": {
+            "Config": {},
+            "Type": "none"
+          }
+        },
+        "policy_provenance": "identity-verified Docker inspect readback; policy verification stated separately",
+        "engine_state": {
+          "Dead": false,
+          "Error": "",
+          "ExitCode": 0,
+          "FinishedAt": "2026-10-19T15:28:44.862522589Z",
+          "OOMKilled": false,
+          "Paused": false,
+          "Pid": 0,
+          "Restarting": false,
+          "Running": false,
+          "StartedAt": "2026-10-19T15:28:44.003669505Z",
+          "Status": "exited"
+        },
+        "resources": {
+          "status": "COLLECTED",
+          "provenance": "trusted guest cgroup v2 files over dedicated Colima SSH",
+          "binding": {
+            "path": "/sys/fs/cgroup/docker/d1309fe0abc2839bde785fc8b2333a2c683d80459cd4a253d53b53c427d67e05",
+            "inode": 5181,
+            "observer_cgroup": "/user.slice/user-501.slice/session-4.scope",
+            "container_id": "d1309fe0abc2839bde785fc8b2333a2c683d80459cd4a253d53b53c427d67e05",
+            "identity_source": "verified engine ID/name/labels before START; exact canonical guest cgroup path/inode"
+          },
+          "sample_count": 13,
+          "first_guest_uptime_s": 21.22,
+          "last_guest_uptime_s": 22.04,
+          "metrics": {
+            "cgroup.events": {
+              "first": {
+                "populated": 1,
+                "frozen": 0
+              },
+              "last": {
+                "populated": 1,
+                "frozen": 0
+              },
+              "read_count": 13,
+              "completeness": "live samples; final unknown"
+            },
+            "cpu.max": {
+              "first": "50000 100000",
+              "last": "50000 100000",
+              "read_count": 13,
+              "completeness": "live samples; final unknown"
+            },
+            "cpu.max.burst": {
+              "first": 0,
+              "last": 0,
+              "read_count": 13,
+              "completeness": "live samples; final unknown",
+              "max_observed": 0
+            },
+            "cpu.stat": {
+              "first": {
+                "usage_usec": 12355,
+                "user_usec": 7942,
+                "system_usec": 4412,
+                "core_sched.force_idle_usec": 0,
+                "nr_periods": 0,
+                "nr_throttled": 0,
+                "throttled_usec": 0,
+                "nr_bursts": 0,
+                "burst_usec": 0
+              },
+              "last": {
+                "usage_usec": 42489,
+                "user_usec": 25107,
+                "system_usec": 17382,
+                "core_sched.force_idle_usec": 0,
+                "nr_periods": 4,
+                "nr_throttled": 0,
+                "throttled_usec": 0,
+                "nr_bursts": 0,
+                "burst_usec": 0
+              },
+              "read_count": 13,
+              "completeness": "live samples; final unknown",
+              "delta": {
+                "nr_periods": 4,
+                "usage_usec": 30134,
+                "burst_usec": 0,
+                "throttled_usec": 0,
+                "nr_throttled": 0,
+                "system_usec": 12970,
+                "nr_bursts": 0,
+                "core_sched.force_idle_usec": 0,
+                "user_usec": 17165
+              }
+            },
+            "memory.current": {
+              "first": 2072576,
+              "last": 9007104,
+              "read_count": 13,
+              "completeness": "live samples; final unknown",
+              "max_observed": 17219584
+            },
+            "memory.events": {
+              "first": {
+                "low": 0,
+                "high": 0,
+                "max": 0,
+                "oom": 0,
+                "oom_kill": 0,
+                "oom_group_kill": 0
+              },
+              "last": {
+                "low": 0,
+                "high": 0,
+                "max": 0,
+                "oom": 0,
+                "oom_kill": 0,
+                "oom_group_kill": 0
+              },
+              "read_count": 13,
+              "completeness": "live samples; final unknown",
+              "delta": {
+                "high": 0,
+                "oom_kill": 0,
+                "low": 0,
+                "oom_group_kill": 0,
+                "oom": 0,
+                "max": 0
+              }
+            },
+            "memory.events.local": {
+              "first": {
+                "low": 0,
+                "high": 0,
+                "max": 0,
+                "oom": 0,
+                "oom_kill": 0,
+                "oom_group_kill": 0
+              },
+              "last": {
+                "low": 0,
+                "high": 0,
+                "max": 0,
+                "oom": 0,
+                "oom_kill": 0,
+                "oom_group_kill": 0
+              },
+              "read_count": 13,
+              "completeness": "live samples; final unknown",
+              "delta": {
+                "high": 0,
+                "oom_kill": 0,
+                "low": 0,
+                "oom_group_kill": 0,
+                "oom": 0,
+                "max": 0
+              }
+            },
+            "memory.max": {
+              "first": 134217728,
+              "last": 134217728,
+              "read_count": 13,
+              "completeness": "live samples; final unknown",
+              "max_observed": 134217728
+            },
+            "memory.peak": {
+              "first": 3584000,
+              "last": 18018304,
+              "read_count": 13,
+              "completeness": "live samples; final unknown",
+              "max_observed": 18018304
+            },
+            "memory.swap.current": {
+              "first": 0,
+              "last": 0,
+              "read_count": 13,
+              "completeness": "live samples; final unknown",
+              "max_observed": 0
+            },
+            "memory.swap.max": {
+              "first": 0,
+              "last": 0,
+              "read_count": 13,
+              "completeness": "live samples; final unknown",
+              "max_observed": 0
+            },
+            "pids.current": {
+              "first": 2,
+              "last": 2,
+              "read_count": 13,
+              "completeness": "live samples; final unknown",
+              "max_observed": 32
+            },
+            "pids.events": {
+              "first": {
+                "max": 0
+              },
+              "last": {
+                "max": 6
+              },
+              "read_count": 13,
+              "completeness": "live samples; final unknown",
+              "delta": {
+                "max": 6
+              }
+            },
+            "pids.max": {
+              "first": 32,
+              "last": 32,
+              "read_count": 13,
+              "completeness": "live samples; final unknown",
+              "max_observed": 32
+            },
+            "pids.peak": {
+              "first": 6,
+              "last": 32,
+              "read_count": 13,
+              "completeness": "live samples; final unknown",
+              "max_observed": 32
+            }
+          },
+          "unavailable": [],
+          "stop_reason": "unpopulated",
+          "final_counters_complete": false,
+          "error": null
+        },
+        "termination": {
+          "mechanism": "TARGET_EXIT_OBSERVED",
+          "pybox_kill_attempted": false,
+          "pybox_kill_sent": false,
+          "timer_limit_s": 3.0,
+          "started_at": "2026-10-19T15:28:44.003669505Z",
+          "finished_at": "2026-10-19T15:28:44.862522589Z",
+          "exitcode": 0,
+          "oom_killed": false,
+          "engine_lifetime_s": 0.858853
+        }
+      },
+      "capture": {
+        "stdout": "30 6\n",
+        "stderr": "",
+        "output_complete": true,
+        "input_complete": true,
+        "stdout_truncated": false,
+        "stderr_truncated": false,
+        "provenance": "target byte streams via bounded Docker attach; untrusted content"
+      },
+      "lifecycle": {
+        "last_phase": "start",
+        "cancelled": false,
+        "timeouts": [],
+        "wall_start_monotonic": 483382.5543535,
+        "wall_deadline_monotonic": 483384.5543535,
+        "attach_elapsed_s": 0.8991019999957643,
+        "lifecycle_elapsed_s": 1.2331954590044916
+      },
+      "cleanup": {
+        "status": "REMOVED",
+        "removed": true,
+        "reconciliation": {
+          "owner": "<installation>",
+          "found": [],
+          "removed": [],
+          "pending_attempts": [],
+          "complete": true,
+          "admission_allowed": true,
+          "runner_error": null,
+          "operation_count": 1
+        }
+      },
+      "clock_domains": {
+        "supervisor": "Mac UTC and Mac monotonic",
+        "engine": "guest Docker daemon UTC",
+        "counters": "guest uptime; samples are non-atomic",
+        "utc_alignment": "unmeasured"
+      },
+      "unknown": {
+        "final_resource_counters": true,
+        "exact_termination_cause": true,
+        "absolute_clock_alignment": true,
+        "limitation": "live samples can miss startup/teardown; deltas cover successful reads, not lifetime; exit code alone is not a cause"
+      },
+      "explanations": [
+        {
+          "code": "TARGET_EXIT_OBSERVED",
+          "value": 0,
+          "evidence": [
+            "Docker terminal State"
+          ]
+        },
+        {
+          "code": "TASK_LIMIT_EVENT_OBSERVED",
+          "count": 6,
+          "evidence": [
+            "trusted guest pids.events; live sample"
+          ]
+        }
+      ]
+    }
+  }
+}

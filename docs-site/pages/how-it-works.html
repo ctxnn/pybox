@@ -1,0 +1,27 @@
+<!--meta {"title": "How it works", "description": "Watch one real PyBox run, step by step: from handing over a program to reading its receipt, including what happens if PyBox itself crashes.", "lede": "Watch one real, recorded run from start to finish. Each step is also written out below, with links to the details.", "assets": ["walkthrough.css", "walkthrough.js"]}-->
+<div class="wt" data-walkthrough data-video="assets/how-pybox-works.mp4" data-audio="assets/how-pybox-works.m4a"></div>
+<p class="muted">The run shown was recorded on 19 October 2026. Times inside the run are slowed down so you can follow them; the real run took 0.054 seconds.</p>
+
+<h2>The ten steps</h2>
+<ol class="steps">
+<li><strong>You hand PyBox a program.</strong> The whole program travels on standard input. It never becomes part of a command line, and it can't choose any settings.</li>
+<li><strong>It makes sure it's the only run, and tidies up.</strong> A lock lets one run (or cleanup) in at a time. Before building anything, PyBox removes this installation's <em>expired, stopped</em> leftover boxes, and nothing else. <a href="cleanup.html">How cleanup decides</a>.</li>
+<li><strong>It writes down what it's about to build, before building it.</strong> A small private note records the run's identity. If PyBox crashes halfway, the next run reads the note and knows a box might exist.</li>
+<li><strong>It builds a fresh, sealed box.</strong> A brand-new Linux container from one pinned image: no folders from your Mac, no network, a read-only system, 128 MB of memory, 32 processes, half a CPU core. <a href="sealed-box.html">The sealed box</a>.</li>
+<li><strong>It reads the settings back and checks every one.</strong> PyBox asks the container engine what it actually created and compares it with the fixed policy. Any difference and the program never starts.</li>
+<li><strong>A watcher outside the box gets ready.</strong> A small, trusted reader inside the VM, but outside the box, starts sampling the box's memory, process and CPU counters straight from the Linux kernel. It only reads. It never stops or removes anything.</li>
+<li><strong>The program runs, and two clocks start.</strong> PyBox's own 2-second deadline on your Mac, and a 3-second timer inside the box that runs as the box's very first process. <a href="deadlines.html">Why two clocks</a>.</li>
+<li><strong>It finishes, and PyBox asks the engine what happened.</strong> The exit code comes from the engine's record, not from anything the program printed. The program's output is kept, but labelled untrusted.</li>
+<li><strong>The box is removed, and PyBox checks it's really gone.</strong> Remove, then look again for that exact box. Only then is the note from step 3 closed.</li>
+<li><strong>You get the receipt.</strong> What was asked for, what was seen, what the program said, and what isn't known. <a href="receipt.html">Reading a receipt</a>.</li>
+</ol>
+
+<h2>What if PyBox itself crashes?</h2>
+<p>Steps 8 and 9 need PyBox to be alive. If something kills PyBox mid-run, nothing on your Mac is left to stop the program, so the timer inside the box does it. In a recorded test, PyBox was force-killed about 0.1 seconds into an 8-second sleep. The timer still ended the program at <strong>3.03 seconds</strong>, with no help from PyBox.</p>
+<p>The stopped, empty box stays behind. It holds no running code, only its record. The next PyBox run (or <code>pybox cleanup</code>) removes it once it has expired, about two minutes after it was created.</p>
+<div class="callout limit">
+<p><strong>Limits.</strong> These timers assume a healthy virtual machine that keeps running normally. They're not real-time guarantees. And if you never run PyBox again, a stopped box can sit there indefinitely; nothing deletes it in the background.</p>
+<!--/callout--></div>
+
+<h2>Watch it offline or share it</h2>
+<p>The walkthrough is also available as a video file: <a href="assets/how-pybox-works.mp4" download>how-pybox-works.mp4</a> (1080p, 87 seconds, with captions and background music).</p>

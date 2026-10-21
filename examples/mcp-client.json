@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pybox": {
+      "command": "pybox",
+      "args": ["mcp"]
+    }
+  }
+}

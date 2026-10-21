@@ -1,0 +1,43 @@
+<!--meta {"title": "Cleanup you can trust", "description": "How PyBox removes boxes, why it never sweeps away anything it can't prove is its own, and how to recover from an interrupted run.", "lede": "Removing a box sounds simple. Doing it without ever deleting the wrong thing, or claiming a box is gone when it isn't, takes a few careful rules."}-->
+<h2>After every run</h2>
+<p>When a run ends, PyBox removes its box and then looks again to confirm it's really gone. Only then does the receipt say <code>REMOVED</code>. If the engine can't be reached, PyBox doesn't assume success; it says <code>UNCONFIRMED</code>.</p>
+
+<h2>Every box is labelled</h2>
+<p>Before creating a box, PyBox gives it three labels: who owns it (your installation), which run it belongs to, and when it expires (two minutes later). Before deleting anything, PyBox checks the box's full ID, its name and all three labels. There's no "delete everything that looks like PyBox".</p>
+
+<h2>Tidying up after a crash</h2>
+<p>If PyBox is killed mid-run, the timer stops the program, but the empty, stopped box stays. The next time PyBox runs, it <strong>reconciles</strong> first:</p>
+<ol class="steps">
+<li><strong>It lists only this installation's boxes.</strong> Containers that belong to anything else are invisible to it.</li>
+<li><strong>It keeps anything that hasn't expired yet.</strong> A box from a run that might still be going is left alone.</li>
+<li><strong>It removes an expired box only if it's stopped</strong> and every label still matches. It never force-kills a running box during cleanup.</li>
+<li><strong>It confirms each removal</strong> by looking again.</li>
+</ol>
+<p>You can also run reconciliation on its own:</p>
+<figure class="code"><figcaption>Terminal</figcaption><pre><span class="p">$ </span>pybox cleanup</pre></figure>
+<div class="callout note">
+<p>If you never run PyBox again, a stopped box can stay indefinitely. Nothing deletes it in the background. That's a deliberate trade: no daemon, no background process with the power to delete things.</p>
+<!--/callout--></div>
+
+<h2>The note written before building</h2>
+<p>Just before creating a box, PyBox writes a small private note (in <code>~/.pybox/runtime/attempts/</code>) saying which box it's about to create. Once the box exists, it adds the box's ID. The note is deleted only after the box is confirmed gone.</p>
+<p>The note solves a subtle problem. Suppose PyBox asks the engine to create a box, and the request times out. A moment later PyBox looks and finds nothing. Was it never created, or is it still being created? An empty list can't tell those apart. So PyBox keeps the note, reports the run as <code>UNCONFIRMED</code>, and <strong>refuses new runs</strong> until the question is settled.</p>
+
+<h3>Settling an unconfirmed run</h3>
+<p>If <code>pybox cleanup</code> keeps reporting <em>"unresolved create … a late object is possible"</em>, wait until the run is past its expiry plus one minute, then tell PyBox to retire it:</p>
+<figure class="code"><figcaption>Terminal</figcaption><pre><span class="p">$ </span>pybox cleanup --resolve-attempt 8f3a…c210   <span class="c"># the 32-character run ID from pending_attempts</span></pre></figure>
+<p>PyBox looks one last time for a box with that exact name and labels. Only if that complete search is empty does it delete the note, and it records <code>ABSENT_AFTER_EXPIRY</code>, not "never created", because that still can't be proven. It never removes anything in this step. If a box did appear later, it would carry your installation's label and be cleaned up normally.</p>
+
+<h2>What the statuses mean</h2>
+<table>
+<thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>REMOVED</code></td><td>Removed, then confirmed gone</td></tr>
+<tr><td><code>ABSENT</code></td><td>A known box was already gone</td></tr>
+<tr><td><code>NOT_CREATED</code></td><td>The engine definitely refused to create it, <em>and</em> a complete search found nothing</td></tr>
+<tr><td><code>UNCONFIRMED</code></td><td>PyBox can't prove the box is gone. It says so instead of guessing</td></tr>
+<tr><td><code>NOT_ATTEMPTED</code></td><td>Nothing was created, e.g. the VM wasn't running</td></tr>
+<tr><td><code>KEPT_UNEXPIRED</code></td><td>(during reconciliation) Not yet expired, so left alone</td></tr>
+<tr><td><code>ABSENT_AFTER_EXPIRY</code></td><td>(when settling an unconfirmed run) Past expiry and not found; the note was retired</td></tr>
+</tbody>
+</table>

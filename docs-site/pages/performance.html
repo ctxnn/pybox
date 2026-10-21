@@ -1,0 +1,28 @@
+<!--meta {"title": "Performance", "description": "How long a fresh sealed run takes, phase by phase, measured on real runs.", "lede": "Every run builds a brand-new box, checks it, runs the program, and removes it. On an M-series Mac that whole cycle takes about a fifth of a second.", "checked": "21 October 2026"}-->
+<h2>Measured</h2>
+<p>20 runs of the program <code>pass</code> in the default image, and 10 in <code>data</code>, each in a fresh box, with the VM already running. Recorded 21 October 2026 with <code>python tools/bench.py</code> on the machine PyBox was built on, after the review fixes.</p>
+<table>
+<thead><tr><th>Phase</th><th>What happens</th><th>stdlib, median</th><th>data, median</th></tr></thead>
+<tbody>
+<tr><td>Admission and tidy-up</td><td>Take the lock, list this installation's boxes</td><td>0.012 s</td><td>0.011 s</td></tr>
+<tr><td>Create</td><td>Build the box from its image</td><td>0.024 s</td><td>0.022 s</td></tr>
+<tr><td>Read back</td><td>Ask the engine what it built and check every setting</td><td>0.012 s</td><td>0.012 s</td></tr>
+<tr><td>Arm the watcher</td><td>Start the kernel watcher inside the VM</td><td>0.009 s</td><td>0.009 s</td></tr>
+<tr><td>Run</td><td>Start the box, Python starts, the program runs, the box exits</td><td>0.067 s</td><td>0.192 s</td></tr>
+<tr><td>Remove</td><td>Remove the box and confirm it's gone</td><td>0.067 s</td><td>0.065 s</td></tr>
+<tr><td><strong>Total</strong></td><td>From the call to the receipt</td><td><strong>0.204 s</strong> (0.177–0.391)</td><td><strong>0.321 s</strong> (0.315–0.341)</td></tr>
+</tbody>
+</table>
+<p>The <code>data</code> run includes the 0.12 s pause for a <a href="packages.html#final-readings">final reading</a>. Starting the VM takes about 20 seconds and happens once, with <code>pybox vm start</code>.</p>
+
+<h2>What made it faster</h2>
+<p>The first measurement (M9) took 0.316 s per run, and almost half of that was arming the kernel watcher: 0.146 s. Nearly all of it went to starting <code>colima</code> and Lima's helper programs before the SSH connection, which Lima already keeps open. PyBox now runs <code>/usr/bin/ssh</code> over that open connection itself, which takes 4–9 ms. It reads only four values from Lima's SSH settings (user, port, key and connection socket) and checks each one against what this installation expects. If any check fails, it falls back to <code>colima ssh</code>. The receipt records which way the watcher was reached (<code>configured.watcher_transport</code>).</p>
+
+<h2>Why there's no pool of ready boxes</h2>
+<p>Keeping boxes pre-built would save a few hundredths of a second per run. It would also mean a box could exist before you asked for it, with settings checked at some earlier time, and possibly reused. "Fresh every time, checked just before it runs" is the point of PyBox. At about 0.2 s per run, giving that up isn't worth it, so PyBox doesn't do it.</p>
+
+<h2>Reproduce it</h2>
+<figure class="code"><figcaption>Terminal</figcaption><pre><span class="p">$ </span>pybox vm start
+<span class="p">$ </span>python tools/bench.py --runs 20
+<span class="p">$ </span>python tools/bench.py --runs 10 --image data</pre></figure>
+<p>Each benchmark run is a real sealed run, so the usual rule applies: one run at a time per installation.</p>

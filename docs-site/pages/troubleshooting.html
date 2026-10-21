@@ -1,0 +1,49 @@
+<!--meta {"title": "Troubleshooting", "description": "What PyBox's messages mean and what to do about them.", "lede": "PyBox fails closed: when something isn't right, it refuses and tells you why. Here's what each message means."}-->
+<h2>Setup and the VM</h2>
+<table>
+<thead><tr><th>You see</th><th>What to do</th></tr></thead>
+<tbody>
+<tr><td><code>restricted runtime is not set up (run: pybox setup)</code></td><td>Run <code>pybox setup</code>, read the plan, then <code>pybox setup --yes</code>.</td></tr>
+<tr><td><code>dedicated VM is not running (start it with: pybox vm start …)</code></td><td>Run <code>pybox vm start</code>. Nothing else starts the VM for you.</td></tr>
+<tr><td><code>required tool missing</code></td><td>Install the prerequisites: <code>brew install colima docker</code>.</td></tr>
+<tr><td><code>tool is not a private executable</code></td><td>The <code>docker</code> or <code>colima</code> binary is writable by other users. Fix its permissions or reinstall it with Homebrew.</td></tr>
+<tr><td><code>supports macOS on Apple Silicon (arm64) only</code></td><td>PyBox doesn't run on Intel Macs, Linux or Windows yet.</td></tr>
+<tr><td><code>conflict … existing file differs; will not overwrite</code> during setup</td><td>A file in <code>~/.pybox/runtime</code> isn't what PyBox expects. Look at it, then move it aside yourself and run setup again.</td></tr>
+<tr><td><code>started, but verification failed … stopping</code></td><td><code>vm start</code> found a setting it doesn't accept (shared folders, port forwarding, a missing image) and stopped the VM. Run <code>pybox doctor</code> for details.</td></tr>
+</tbody>
+</table>
+
+<h2>Running programs</h2>
+<table>
+<thead><tr><th>You see</th><th>What to do</th></tr></thead>
+<tbody>
+<tr><td><code>another PyBox run or cleanup holds lifecycle admission</code></td><td>One run at a time, by design. Try again when the other finishes.</td></tr>
+<tr><td><code>reconciliation blocks execution: … an owned target is still running</code></td><td>A previous program is still running. Its timer stops it within about 3 seconds; try again.</td></tr>
+<tr><td><code>reconciliation blocks execution: … unresolved create</code></td><td>An earlier run was interrupted while its box was being created. After it expires (about 3 minutes), run <code>pybox cleanup --resolve-attempt &lt;run&gt;</code>. <a href="cleanup.html#settling-an-unconfirmed-run">Why</a>.</td></tr>
+<tr><td><code>trusted collector did not arm before START</code></td><td>The kernel watcher didn't start in time, so PyBox refused to run the program unobserved. Try again; if it repeats, restart the VM.</td></tr>
+<tr><td>Exit code 137</td><td>By itself it only means "killed". Read <code>observed.termination</code> and <code>explanations</code> in the receipt for the evidence.</td></tr>
+<tr><td><code>stdout_truncated: true</code>, or "(cut)" on the receipt</td><td>The program printed more than the output cap. Raise <code>--max-output-bytes</code> (up to 65,536), or write the result to a file with <code>--output</code>.</td></tr>
+<tr><td><code>image 'data' is not installed</code></td><td>Build it once: <code>pybox setup --yes --with data</code>. For your own images: <code>pybox image build NAME --lock FILE</code>.</td></tr>
+<tr><td><code>lock line N is not an exact pin with --hash=sha256:…</code></td><td>Every package needs an exact version and a hash. Generate the file with <code>uv pip compile … --generate-hashes</code> (see <a href="packages.html#your-own-packages">your own packages</a>).</td></tr>
+<tr><td><code>another image build or removal is running</code></td><td>One at a time, so the image record is never written from a stale copy. Wait for the other one.</td></tr>
+<tr><td><code>could not write outputs (nothing was written)</code></td><td>The output folder changed during the run, or a name clashed. Nothing was half-written; run again with a new <code>--output</code> folder.</td></tr>
+<tr><td><code>image 'data' was built from a different recipe</code></td><td>PyBox was upgraded with a new package list. Rebuild: <code>pybox setup --yes --with data</code>.</td></tr>
+<tr><td><code>output folder is not empty</code></td><td><code>--output</code> must be a new or empty folder, so nothing is ever overwritten. Pick a new name.</td></tr>
+<tr><td><code>unsupported file name</code></td><td>Input and output names may use letters, digits, <code>.</code>, <code>_</code> and <code>-</code>, up to 4 folders deep, with no hidden files. Rename the file.</td></tr>
+<tr><td>"no transfer received" on the receipt</td><td>The program didn't finish normally (it hit the deadline, or exited with <code>os._exit</code>), so its output files never came back.</td></tr>
+</tbody>
+</table>
+
+<h2>MCP</h2>
+<table>
+<thead><tr><th>You see</th><th>What to do</th></tr></thead>
+<tbody>
+<tr><td><code>One run is already active; no request was queued</code></td><td>Wait for the current call. PyBox runs one at a time.</td></tr>
+<tr><td><code>Session tool-call limit reached</code></td><td>32 calls per session. Restart the server.</td></tr>
+<tr><td>A call returns <code>isError</code> with cleanup <code>NOT_ATTEMPTED</code></td><td>The VM isn't running. Start it with <code>pybox vm start</code>.</td></tr>
+<tr><td><code>… (set by the server)</code></td><td>The agent asked for a longer time limit or an image the server doesn't allow. Raise <code>--max-timeout</code> or add the image to <code>--images</code> in the MCP config.</td></tr>
+</tbody>
+</table>
+
+<h2>Still stuck?</h2>
+<p>Run <code>pybox doctor</code> and open an issue on <a href="https://github.com/ctxnn/pybox">GitHub</a> with its output.</p>

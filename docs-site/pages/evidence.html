@@ -1,0 +1,91 @@
+<!--meta {"title": "Evidence and limits", "description": "The recorded runs behind every claim on this site, and what is assumed and not claimed.", "lede": "Every claim on this site points to a real, dated run on the machine where PyBox was built. Here they are, along with what they don't prove.", "checked": "21 October 2026"}-->
+<h2>Recorded runs</h2>
+<p>These were recorded on 18–19 October 2026. The raw evidence stays private on the build machine; the cleaned copies used on this site are in <a href="data/replay/index.json"><code>data/replay/</code></a>, each naming its source file and SHA-256 fingerprint.</p>
+<table>
+<thead><tr><th>Program</th><th>What happened</th><th>What the receipt said</th></tr></thead>
+<tbody>
+<tr><td><code>print('hello inspection')</code></td><td>Exited by itself in 0.075 s</td><td>Exit 0 · <code>TARGET_EXIT_OBSERVED</code> · removed</td></tr>
+<tr><td>Raises <code>ValueError</code></td><td>Crashed with a traceback</td><td>Exit 1 · traceback kept as untrusted output · not a PyBox error</td></tr>
+<tr><td>Sleeps 8 s, 0.4 s limit</td><td>Stopped by PyBox's own deadline at 0.447 s</td><td>Exit 137 · <code>SUPERVISOR_KILL_OBSERVED</code> · exit code 124</td></tr>
+<tr><td>A child allocates 160 MiB under a 128 MiB limit</td><td>The child was killed; the parent printed −9 and exited normally</td><td>Exit <strong>0</strong> · engine: out of memory · kernel: 1 out-of-memory kill</td></tr>
+<tr><td>Tries to start 36 processes under a limit of 32</td><td>30 started, 6 refused (PyBox's timer and Python use 2)</td><td>Kernel: peak 32 processes, 6 refusals</td></tr>
+<tr><td>Reads a file on the Mac and a private setting</td><td>Got "no such file" and nothing</td><td>Printed <code>[2, null]</code> · no mounts, no network (verified)</td></tr>
+<tr><td>Prints a fake protocol message (MCP)</td><td>The message stayed inside the output</td><td>0 protocol messages with the forged id</td></tr>
+<tr><td>Sleeps 8 s, then PyBox is force-killed</td><td>The box timer stopped it at 3.03 s</td><td>Exit 137 · 0 stop commands sent by anyone</td></tr>
+</tbody>
+</table>
+
+<h2>Images, files and longer runs</h2>
+<p>Recorded on 21 October 2026 in a fresh, throwaway installation on the build machine. It was set up from nothing (3 min 17 s), used, then deleted along with its VM. The original installation was never touched.</p>
+<table>
+<thead><tr><th>Check</th><th>What happened</th></tr></thead>
+<tbody>
+<tr><td>Default box through <code>pybox exec</code></td><td>Exit 0 in 0.166 s; settings verified before start; box removed</td></tr>
+<tr><td>Files in and out (<code>stdlib</code>)</td><td>A CSV went in; 2 files came back; a symbolic link to <code>/etc/passwd</code> was not brought back; writing to the input copy failed with <code>PermissionError</code></td></tr>
+<tr><td>pandas in the <code>data</code> image</td><td>Grouped the CSV and wrote a result file; memory peak 42.4 MiB of 512</td></tr>
+<tr><td>Sleeps 12 s with <code>--timeout 15</code></td><td>Exited by itself after 12.13 s; 50 kernel samples</td></tr>
+<tr><td>Sleeps 60 s with <code>--timeout 30</code></td><td>Stopped by PyBox at 30.01 s (exit 137, <code>SUPERVISOR_KILL_OBSERVED</code>); removed</td></tr>
+<tr><td>300 MiB array in <code>data</code></td><td>Fits under 512 MiB; exit 0</td></tr>
+<tr><td>700 MiB array in <code>data</code></td><td>Exit 137; engine reported out of memory; cause marked not established</td></tr>
+<tr><td>Network from <code>data</code></td><td>Name lookup failed: no network</td></tr>
+<tr><td>9 MiB output file plus 70 small files</td><td>64 files brought back; the big file and the rest listed as not brought back</td></tr>
+<tr><td>Program exits with <code>os._exit</code></td><td>Exit code kept; no files; "no transfer received"</td></tr>
+<tr><td>100 KB of stdout plus an output file</td><td>stdout cut at 65,536 bytes and flagged; the file still came back intact</td></tr>
+<tr><td>9 MiB input; non-empty output folder</td><td>Both refused on the Mac before any box was built</td></tr>
+<tr><td>MCP with <code>--images stdlib,data --max-timeout 30</code></td><td>pandas call with a file in and a file back succeeded; 31 s and an unknown image were refused "(set by the server)"</td></tr>
+<tr><td>Claude Code (<code>claude -p</code>) over MCP</td><td>Used <code>run_python</code> with the <code>data</code> image and returned files; 3 turns</td></tr>
+<tr><td>Performance (M9)</td><td>Median 0.316 s per complete stdlib run (20 runs), 0.363 s in <code>data</code> (10 runs). Superseded below</td></tr>
+</tbody>
+</table>
+
+<h2>Custom images, final readings, speed and an independent review</h2>
+<p>Recorded on 21 October 2026, in a second throwaway installation set up from nothing (3 min 46 s, including the <code>data</code> image), then deleted.</p>
+<table>
+<thead><tr><th>Check</th><th>What happened</th></tr></thead>
+<tbody>
+<tr><td>Your own image from a <code>uv</code> lock (tabulate, rich, pyyaml)</td><td>Built in 4.5 s; used by <code>pybox exec</code> and over MCP; the receipt notes that its packages can run start-up code</td></tr>
+<tr><td>matplotlib in <code>data</code></td><td>A PNG chart came back with <code>--output</code></td></tr>
+<tr><td>300 MiB array in <code>data</code></td><td>Peak <strong>327.6 MiB</strong> with the final-reading pause; it showed 146.8 MiB before</td></tr>
+<tr><td>Exits with code 3 just before a 10 s deadline</td><td>Exit 3 kept; no deadline fired (the pause stops short of the deadline)</td></tr>
+<tr><td>Hostile output names (terminal escapes, a newline, invalid UTF-8, a link to <code>/etc</code>)</td><td>Receipt intact; names shown escaped; the linked folder listed as not brought back</td></tr>
+<tr><td><code>A.txt</code> and <code>a.txt</code> both written</td><td>Transfer refused; no output folder was created</td></tr>
+<tr><td>Returned files</td><td>Carry <code>com.apple.quarantine</code></td></tr>
+<tr><td>Cursor's command-line agent over MCP</td><td>Two sessions; charts and a custom-image table came back; all boxes removed</td></tr>
+<tr><td>Performance</td><td>Median <strong>0.204 s</strong> per complete stdlib run (20 runs), 0.321 s in <code>data</code>; arming the watcher 9 ms. <a href="performance.html">Details</a></td></tr>
+</tbody>
+</table>
+<p>An independent review session read the new code adversarially before release. It found no way for a program or agent to reach the Mac's files, the network or past the server's ceilings. It did find 2 medium issues (a program could forge the terminal receipt, or blank the MCP receipt with crafted file names), 6 low and 6 informational ones, and 11 places where the docs said more than the code did. All are fixed or documented, with regression tests; see <code>docs/M10_SECURITY_REVIEW.md</code> in the repository.</p>
+
+<h2>The test campaign</h2>
+<table>
+<thead><tr><th>Area</th><th>What was checked</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>Restrictions</td><td>13 checks, most run twice: with the protection and with only that protection removed</td><td>All passed</td></tr>
+<tr><td>Resources</td><td>9 checks of memory, processes and CPU, read straight from the kernel</td><td>All passed</td></tr>
+<tr><td>Crash safety</td><td>PyBox force-killed while running, and before start; the program signalling the timer</td><td>Timer held (3.03 s); leftovers removed after expiry</td></tr>
+<tr><td>Receipts</td><td>8 kinds of run, three passes each</td><td>All passed</td></tr>
+<tr><td>MCP</td><td>13 protocol checks, including cancellation and oversized input</td><td>All passed</td></tr>
+<tr><td>AI repair</td><td>4 broken programs × 2 feedback styles, with a real model</td><td>8 of 8 repaired</td></tr>
+<tr><td>Automated tests</td><td>Unit and protocol tests (no VM needed)</td><td>209 passing</td></tr>
+</tbody>
+</table>
+<p>Failed attempts during testing were kept, not overwritten. An independent review of the whole codebase found one high-severity issue and two medium ones; all three were fixed and re-checked.</p>
+
+<h2>What is assumed</h2>
+<ul>
+<li>The virtual machine is healthy and keeps getting CPU time. If your Mac sleeps, time in the box pauses too.</li>
+<li>Nothing outside PyBox tampers with the box's timer or the VM.</li>
+<li>The Docker command-line tool reports errors in its usual English wording. PyBox relies on that wording in one narrow case.</li>
+</ul>
+
+<h2>What is not claimed</h2>
+<ul>
+<li>That the box resists every possible attack. Thirteen checks prove thirteen cases.</li>
+<li>Exact real-time limits, or exact final resource counts.</li>
+<li>That PyBox works with every MCP app. It was tested with its own client, Claude Code and Cursor's command-line agent, not Claude Desktop or the official SDKs.</li>
+<li>That returned files are trustworthy. They are the program's work, carried by a helper running as the program's own user.</li>
+<li>That the AI repair results generalize. Four problems is an example.</li>
+<li>That setup has been proven on a second Mac. It's unit-tested, and an end-to-end run on another machine is the next milestone.</li>
+<li>Anything about cost. Unknown costs are recorded as unknown.</li>
+</ul>
+

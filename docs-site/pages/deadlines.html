@@ -1,0 +1,51 @@
+<!--meta {"title": "Two deadlines", "description": "Why PyBox uses two clocks, one on your Mac and one inside the box, and what happens when each one fires.", "lede": "One clock is PyBox's own. The other lives inside the box, so a program can't outlive PyBox, even if PyBox itself is killed."}-->
+<h2>The short version</h2>
+<table>
+<thead><tr><th>Clock</th><th>Default</th><th>Starts</th><th>When it fires</th></tr></thead>
+<tbody>
+<tr><td><strong>Mac deadline</strong> (primary)</td><td>2 s</td><td>Just before the program starts</td><td>PyBox asks the engine to stop that exact box, checks it stopped, removes it</td></tr>
+<tr><td><strong>Box timer</strong> (backup)</td><td>3 s</td><td>When the box's first process starts</td><td>The timer kills the program itself, with no help from PyBox</td></tr>
+</tbody>
+</table>
+<p>The box timer is always one second longer, so in normal operation PyBox's own deadline acts first and the timer never has to.</p>
+
+<h2>Why one clock isn't enough</h2>
+<p>PyBox's normal cleanup lives in its own Python process. If that process is force-killed (by you, by the OS, by a crash), its cleanup code never runs. A program left behind could keep running forever.</p>
+<p>So the box's very first process isn't Python. It's a tiny timer that starts Python as its child:</p>
+<figure class="code"><figcaption>What runs inside the box</figcaption><pre>timeout -s KILL 3 python -I -B -u -</pre></figure>
+<p>When the timer runs out, it kills Python. It doesn't need PyBox to be alive. In a recorded test, PyBox was force-killed about 0.1 seconds into an 8-second sleep. The program still stopped at <strong>3.03 seconds</strong>, and PyBox's own command logs show it never sent a kill.</p>
+<p>A second recorded test went further: the <em>program</em> tried to stop or pause the timer by signalling it. The timer still fired, at 3.03 seconds both times.</p>
+
+<h2>Choosing the time limit</h2>
+<p>The default is 2 seconds. You can lower it, or raise it to at most 30 seconds when a job needs it:</p>
+<figure class="code"><pre><span class="p">$ </span>pybox exec slow_job.py --timeout 20</pre></figure>
+<p>The box timer follows: 20 s on the Mac means 21 s in the box. In a recorded test, a program sleeping for 60 s with <code>--timeout 30</code> was stopped by PyBox at 30.01 s. For AI agents, the server's <code>--max-timeout</code> sets the ceiling. See <a href="packages.html#longer-runs">longer runs</a>. The receipt shows both, as <code>wall_timeout_s</code> and <code>guest_timer_s</code>.</p>
+
+<h2>Other bounded waits</h2>
+<p>Every step PyBox takes has its own short budget, so no single slow step can hang a run:</p>
+<table>
+<thead><tr><th>Step</th><th>Budget</th></tr></thead>
+<tbody>
+<tr><td>Create the box</td><td>5 s</td></tr>
+<tr><td>Start and attach</td><td>The run's own deadline (at least 2 s)</td></tr>
+<tr><td>Inspect, query, stop</td><td>2 s each</td></tr>
+<tr><td>Remove</td><td>3 s</td></tr>
+<tr><td>All of cleanup together</td><td>15 s (a single retry, after an interruption mid-cleanup, gets a fresh 15 s)</td></tr>
+</tbody>
+</table>
+
+<h2>What the receipt says about it</h2>
+<p>The receipt never decides <em>why</em> a program ended from its exit code alone. Exit code 137 means "killed", but not by whom. So PyBox only labels the cause when it has its own evidence:</p>
+<table>
+<thead><tr><th>Label</th><th>Means</th></tr></thead>
+<tbody>
+<tr><td><code>TARGET_EXIT_OBSERVED</code></td><td>The program ended by itself; PyBox didn't stop it</td></tr>
+<tr><td><code>SUPERVISOR_KILL_OBSERVED</code></td><td>PyBox sent a stop, the engine confirmed it, and the timestamps line up</td></tr>
+<tr><td><code>IN_CONTAINER_TIMER_CONSISTENT</code></td><td>PyBox sent nothing, and the program ended right when the box timer would. That's consistent with the timer, but not proof</td></tr>
+<tr><td><code>UNKNOWN</code></td><td>Anything else. PyBox says so instead of guessing</td></tr>
+</tbody>
+</table>
+
+<div class="callout limit">
+<p><strong>Limits.</strong> Both clocks assume a healthy virtual machine that keeps getting CPU time. If your Mac sleeps or the VM is paused, time inside the box pauses too. These are strong practical limits, not hard real-time guarantees.</p>
+<!--/callout--></div>

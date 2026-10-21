@@ -1,0 +1,51 @@
+<!--meta {"title": "Files in and out", "description": "Send copies of files into a run and bring back what the program writes, without ever sharing a folder from your Mac.", "lede": "Give a program copies of your files, and get back what it writes. No folder on your Mac is ever shared with the box. Files travel as bounded copies, and everything that comes back is checked before it touches your disk.", "checked": "21 October 2026"}-->
+<h2>In one command</h2>
+<figure class="code"><figcaption>Terminal</figcaption><pre><span class="p">$ </span>pybox exec report.py --input sales.csv --output results/</pre></figure>
+<figure class="code"><figcaption>report.py</figcaption><pre>import csv, json
+rows = csv.DictReader(open("/tmp/input/sales.csv"))
+totals = {}
+for r in rows:
+    totals[r["region"]] = totals.get(r["region"], 0) + int(r["sales"])
+json.dump(totals, open("/tmp/output/summary.json", "w"))</pre></figure>
+<p>Afterwards <code>results/summary.json</code> exists on your Mac, and the receipt lists every file that went in and came out:</p>
+<figure class="code"><figcaption>Recorded 21 October 2026 (trimmed)</figcaption><pre>From the program  untrusted: a program can print or write anything
+  Printed               79 bytes on stdout, 0 bytes on stderr
+  Files in              1 file(s), 41 bytes
+  Files out             2 file(s), 47 bytes → results/
+  Not brought back      escape</pre></figure>
+<p>That program also tried to leave a symbolic link to <code>/etc/passwd</code> in its output folder. Links are never brought back, so it's listed under <em>Not brought back</em>.</p>
+
+<h2>The rules</h2>
+<table>
+<thead><tr><th></th><th>Going in (<code>--input</code>)</th><th>Coming back (<code>--output</code>)</th></tr></thead>
+<tbody>
+<tr><td>Where, in the box</td><td><code>/tmp/input/</code>. A file keeps its name; a folder keeps its folder name, with its contents inside</td><td>Whatever the program writes under <code>/tmp/output/</code></td></tr>
+<tr><td>How many</td><td colspan="2">Up to 64 files and 8 MiB in total, each way</td></tr>
+<tr><td>Names</td><td colspan="2">Letters, digits, <code>.</code>, <code>_</code> and <code>-</code>, up to 4 folders deep, no hidden files. Names that differ only in upper and lower case count as the same, because Mac folders usually do. Anything else is refused</td></tr>
+<tr><td>Links and special files</td><td>Refused: PyBox never follows a link on your Mac</td><td>Skipped and listed by name, with any unusual characters shown as <code>\xNN</code>. Empty folders are dropped</td></tr>
+<tr><td>On your Mac</td><td>Your originals are only read. The program gets copies, made read-only in the box</td><td><code>--output</code> must be a new or empty folder. Files are written all at once or not at all, never following a link, never overwriting, and marked like downloads (<code>com.apple.quarantine</code>) so macOS checks them when opened</td></tr>
+</tbody>
+</table>
+<p>Limits are checked on your Mac <em>before</em> any box is built, so an oversized input fails immediately with no run.</p>
+
+<h2>How the files travel</h2>
+<p>The box still has no mounts, so files travel over the same channel the program uses. For runs that move files (and other opt-in runs), the box's first process starts a small fixed helper instead of plain <code>python -</code>. The exact command is part of the settings PyBox checks before starting. The helper:</p>
+<ol class="steps">
+<li>Reads the program and the input files from standard input, and writes the files to <code>/tmp/input/</code>.</li>
+<li>Runs the program as <code>python -</code> would: as <code>__main__</code>, with the same exit codes and tracebacks.</li>
+<li>When the program's main code returns, packs <code>/tmp/output/</code> (regular files only, within the limits) and appends it to standard output after a marker unique to this run. Files written later by background threads or exit handlers aren't included. The marker keeps ordinary output from being mistaken for the transfer; it isn't a secret from the program.</li>
+</ol>
+<p>On your Mac, PyBox splits the program's output from the files at that marker, decodes them strictly, and checks every name and size again. It writes them into a fresh hidden folder next to <code>--output</code> and renames that folder into place only when every file is written, so you never get half a result. For runs that move files, the box's scratch space grows from 16 MiB to 64 MiB.</p>
+
+<div class="callout warn">
+<p><strong>What comes back is the program's work, so treat it as untrusted.</strong> The helper runs as the program's own user, so a program can read its state, change its copies of the inputs, or fake its own outputs. That can't reach your Mac's files, but it means returned files are only as trustworthy as the program. If the program never finishes (it's stopped at the deadline, or exits with <code>os._exit</code>), nothing comes back, and the receipt says <em>no transfer received</em>.</p>
+<!--/callout--></div>
+
+<h2>From Python and MCP</h2>
+<figure class="code"><figcaption>Python</figcaption><pre>from pybox import run_container
+
+result = run_container(open("report.py").read(), inputs=[("sales.csv", open("sales.csv", "rb").read())],
+                       collect_outputs=True)
+for name, data in result.output_files:   <span class="c"># (name, bytes), untrusted</span>
+    print(name, len(data))</pre></figure>
+<p>Over MCP, an agent passes <code>files</code> and <code>return_files</code>. The limits are smaller there so results fit the protocol: 256 KiB of input files, and 48 KiB of returned file contents (larger files are listed with their size and SHA-256). See <a href="mcp.html#files">MCP for AI agents</a>.</p>

@@ -1,0 +1,409 @@
+{
+  "label": "REPLAY",
+  "id": "m4-memory",
+  "title": "OOM kill with container exit 0",
+  "recorded": "2026-10-19 (M4 pass 3)",
+  "note": "Recorded evidence replayed for documentation; not a fresh live execution.",
+  "summary": "A child allocating 160 MiB under 128 MiB was OOM-killed; the parent exited 0. Engine and kernel both report the OOM.",
+  "sources": [
+    {
+      "path": "evidence/raw/pybox-m4-20261019-03/memory.result.json",
+      "sha256": "c42a725d462e47a2af723925547252dbcf23a18743898afc4411120b6b7bef7a"
+    },
+    {
+      "path": "evidence/raw/pybox-m4-20261019-03/memory.source.py",
+      "sha256": "d5269bb51f79137ad4df776d880456035ab4579981c18e0aed6a7384e32e3721"
+    }
+  ],
+  "payload": {
+    "source": "import os,time,signal\nsignal.alarm(4)\npid=os.fork()\nif pid==0:\n    with open('/proc/self/oom_score_adj','w') as f:f.write('1000')\n    blocks=[]\n    for _ in range(160):\n        blocks.append(bytearray(1048576))\n        time.sleep(0.003)\n    os._exit(0)\n_,status=os.waitpid(pid,0)\nprint(os.waitstatus_to_exitcode(status))\ntime.sleep(0.5)\n",
+    "record": {
+      "schema_version": 1,
+      "backend": "container",
+      "container_id": "ade49b45fe2dcbfd96b3a3f8b6290cf39b4638112d051fe80de1357ee5299df9",
+      "submission": {
+        "source_sha256": "d5269bb51f79137ad4df776d880456035ab4579981c18e0aed6a7384e32e3721"
+      },
+      "configured": {
+        "image": "python@sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f",
+        "wall_timeout_s": 2.0,
+        "guest_timer_s": 3.0,
+        "memory_bytes": 134217728,
+        "memory_plus_swap_bytes": 134217728,
+        "pids": 32,
+        "cpu_cores": 0.5,
+        "output_bytes_per_stream": 65536,
+        "network": "none",
+        "user": "10000:10000",
+        "readonly_root": true,
+        "tmpfs_bytes": 16777216,
+        "no_new_privileges": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "seccomp": "runtime default",
+        "nofile": 128,
+        "engine_log": "none"
+      },
+      "observed": {
+        "policy_verified_before_start": true,
+        "effective_policy": {
+          "user": "10000:10000",
+          "entrypoint": [
+            "timeout"
+          ],
+          "command": [
+            "-s",
+            "KILL",
+            "3",
+            "python",
+            "-I",
+            "-B",
+            "-u",
+            "-"
+          ],
+          "image": "python@sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f",
+          "network": "none",
+          "readonly_root": true,
+          "memory_bytes": 134217728,
+          "memory_plus_swap_bytes": 134217728,
+          "pids": 32,
+          "nano_cpus": 500000000,
+          "security_options": [
+            "no-new-privileges"
+          ],
+          "cap_drop": [
+            "ALL"
+          ],
+          "cap_add": null,
+          "tmpfs": {
+            "/tmp": "rw,nosuid,nodev,noexec,size=16m,mode=1777"
+          },
+          "nofile": [
+            {
+              "Hard": 128,
+              "Name": "nofile",
+              "Soft": 128
+            }
+          ],
+          "engine_log": {
+            "Config": {},
+            "Type": "none"
+          }
+        },
+        "policy_provenance": "identity-verified Docker inspect readback; policy verification stated separately",
+        "engine_state": {
+          "Dead": false,
+          "Error": "",
+          "ExitCode": 0,
+          "FinishedAt": "2026-10-19T15:28:43.621675505Z",
+          "OOMKilled": true,
+          "Paused": false,
+          "Pid": 0,
+          "Restarting": false,
+          "Running": false,
+          "StartedAt": "2026-10-19T15:28:42.612779129Z",
+          "Status": "exited"
+        },
+        "resources": {
+          "status": "COLLECTED",
+          "provenance": "trusted guest cgroup v2 files over dedicated Colima SSH",
+          "binding": {
+            "path": "/sys/fs/cgroup/docker/ade49b45fe2dcbfd96b3a3f8b6290cf39b4638112d051fe80de1357ee5299df9",
+            "inode": 5088,
+            "observer_cgroup": "/user.slice/user-501.slice/session-4.scope",
+            "container_id": "ade49b45fe2dcbfd96b3a3f8b6290cf39b4638112d051fe80de1357ee5299df9",
+            "identity_source": "verified engine ID/name/labels before START; exact canonical guest cgroup path/inode"
+          },
+          "sample_count": 16,
+          "first_guest_uptime_s": 19.83,
+          "last_guest_uptime_s": 20.81,
+          "metrics": {
+            "cgroup.events": {
+              "first": {
+                "populated": 1,
+                "frozen": 0
+              },
+              "last": {
+                "populated": 0,
+                "frozen": 0
+              },
+              "read_count": 16,
+              "completeness": "live samples; final unknown"
+            },
+            "cpu.max": {
+              "first": "50000 100000",
+              "last": "50000 100000",
+              "read_count": 15,
+              "completeness": "live samples; final unknown"
+            },
+            "cpu.max.burst": {
+              "first": 0,
+              "last": 0,
+              "read_count": 15,
+              "completeness": "live samples; final unknown",
+              "max_observed": 0
+            },
+            "cpu.stat": {
+              "first": {
+                "usage_usec": 15390,
+                "user_usec": 9619,
+                "system_usec": 5771,
+                "core_sched.force_idle_usec": 0,
+                "nr_periods": 0,
+                "nr_throttled": 0,
+                "throttled_usec": 0,
+                "nr_bursts": 0,
+                "burst_usec": 0
+              },
+              "last": {
+                "usage_usec": 70184,
+                "user_usec": 33366,
+                "system_usec": 36817,
+                "core_sched.force_idle_usec": 0,
+                "nr_periods": 7,
+                "nr_throttled": 0,
+                "throttled_usec": 0,
+                "nr_bursts": 0,
+                "burst_usec": 0
+              },
+              "read_count": 15,
+              "completeness": "live samples; final unknown",
+              "delta": {
+                "nr_bursts": 0,
+                "system_usec": 31046,
+                "user_usec": 23747,
+                "nr_periods": 7,
+                "throttled_usec": 0,
+                "nr_throttled": 0,
+                "core_sched.force_idle_usec": 0,
+                "burst_usec": 0,
+                "usage_usec": 54794
+              }
+            },
+            "memory.current": {
+              "first": 2854912,
+              "last": 8937472,
+              "read_count": 15,
+              "completeness": "live samples; final unknown",
+              "max_observed": 128819200
+            },
+            "memory.events": {
+              "first": {
+                "low": 0,
+                "high": 0,
+                "max": 0,
+                "oom": 0,
+                "oom_kill": 0,
+                "oom_group_kill": 0
+              },
+              "last": {
+                "low": 0,
+                "high": 0,
+                "max": 35,
+                "oom": 1,
+                "oom_kill": 1,
+                "oom_group_kill": 0
+              },
+              "read_count": 15,
+              "completeness": "live samples; final unknown",
+              "delta": {
+                "max": 35,
+                "oom_kill": 1,
+                "oom": 1,
+                "oom_group_kill": 0,
+                "low": 0,
+                "high": 0
+              }
+            },
+            "memory.events.local": {
+              "first": {
+                "low": 0,
+                "high": 0,
+                "max": 0,
+                "oom": 0,
+                "oom_kill": 0,
+                "oom_group_kill": 0
+              },
+              "last": {
+                "low": 0,
+                "high": 0,
+                "max": 35,
+                "oom": 1,
+                "oom_kill": 1,
+                "oom_group_kill": 0
+              },
+              "read_count": 15,
+              "completeness": "live samples; final unknown",
+              "delta": {
+                "max": 35,
+                "oom_kill": 1,
+                "oom": 1,
+                "oom_group_kill": 0,
+                "low": 0,
+                "high": 0
+              }
+            },
+            "memory.max": {
+              "first": 134217728,
+              "last": 134217728,
+              "read_count": 16,
+              "completeness": "live samples; final unknown",
+              "max_observed": 134217728
+            },
+            "memory.peak": {
+              "first": 3842048,
+              "last": 134217728,
+              "read_count": 15,
+              "completeness": "live samples; final unknown",
+              "max_observed": 134217728
+            },
+            "memory.swap.current": {
+              "first": 0,
+              "last": 0,
+              "read_count": 15,
+              "completeness": "live samples; final unknown",
+              "max_observed": 0
+            },
+            "memory.swap.max": {
+              "first": 0,
+              "last": 0,
+              "read_count": 16,
+              "completeness": "live samples; final unknown",
+              "max_observed": 0
+            },
+            "pids.current": {
+              "first": 2,
+              "last": 2,
+              "read_count": 15,
+              "completeness": "live samples; final unknown",
+              "max_observed": 3
+            },
+            "pids.events": {
+              "first": {
+                "max": 0
+              },
+              "last": {
+                "max": 0
+              },
+              "read_count": 15,
+              "completeness": "live samples; final unknown",
+              "delta": {
+                "max": 0
+              }
+            },
+            "pids.max": {
+              "first": 32,
+              "last": 32,
+              "read_count": 15,
+              "completeness": "live samples; final unknown",
+              "max_observed": 32
+            },
+            "pids.peak": {
+              "first": 6,
+              "last": 6,
+              "read_count": 15,
+              "completeness": "live samples; final unknown",
+              "max_observed": 6
+            }
+          },
+          "unavailable": [
+            "cpu.max",
+            "cpu.max.burst",
+            "cpu.stat",
+            "memory.current",
+            "memory.events",
+            "memory.events.local",
+            "memory.peak",
+            "memory.swap.current",
+            "pids.current",
+            "pids.events",
+            "pids.max",
+            "pids.peak"
+          ],
+          "stop_reason": "disappeared",
+          "final_counters_complete": false,
+          "error": null
+        },
+        "termination": {
+          "mechanism": "TARGET_EXIT_OBSERVED",
+          "pybox_kill_attempted": false,
+          "pybox_kill_sent": false,
+          "timer_limit_s": 3.0,
+          "started_at": "2026-10-19T15:28:42.612779129Z",
+          "finished_at": "2026-10-19T15:28:43.621675505Z",
+          "exitcode": 0,
+          "oom_killed": true,
+          "engine_lifetime_s": 1.008896
+        }
+      },
+      "capture": {
+        "stdout": "-9\n",
+        "stderr": "",
+        "output_complete": true,
+        "input_complete": true,
+        "stdout_truncated": false,
+        "stderr_truncated": false,
+        "provenance": "target byte streams via bounded Docker attach; untrusted content"
+      },
+      "lifecycle": {
+        "last_phase": "start",
+        "cancelled": false,
+        "timeouts": [],
+        "wall_start_monotonic": 483381.166109375,
+        "wall_deadline_monotonic": 483383.166109375,
+        "attach_elapsed_s": 1.0480165000190027,
+        "lifecycle_elapsed_s": 1.4564634159905836
+      },
+      "cleanup": {
+        "status": "REMOVED",
+        "removed": true,
+        "reconciliation": {
+          "owner": "<installation>",
+          "found": [],
+          "removed": [],
+          "pending_attempts": [],
+          "complete": true,
+          "admission_allowed": true,
+          "runner_error": null,
+          "operation_count": 1
+        }
+      },
+      "clock_domains": {
+        "supervisor": "Mac UTC and Mac monotonic",
+        "engine": "guest Docker daemon UTC",
+        "counters": "guest uptime; samples are non-atomic",
+        "utc_alignment": "unmeasured"
+      },
+      "unknown": {
+        "final_resource_counters": true,
+        "exact_termination_cause": true,
+        "absolute_clock_alignment": true,
+        "limitation": "live samples can miss startup/teardown; deltas cover successful reads, not lifetime; exit code alone is not a cause"
+      },
+      "explanations": [
+        {
+          "code": "TARGET_EXIT_OBSERVED",
+          "value": 0,
+          "evidence": [
+            "Docker terminal State"
+          ]
+        },
+        {
+          "code": "OOM_REPORTED_BY_ENGINE",
+          "evidence": [
+            "Docker State.OOMKilled"
+          ],
+          "limitation": "does not establish which process died or make exit 137 uniquely OOM"
+        },
+        {
+          "code": "OOM_KILL_COUNTER_OBSERVED",
+          "count": 1,
+          "evidence": [
+            "trusted guest memory.events; live sample"
+          ]
+        }
+      ]
+    }
+  }
+}

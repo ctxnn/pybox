@@ -1,0 +1,101 @@
+<!--meta {"title": "Reference", "description": "Every limit, budget, setting and file PyBox uses, in one place.", "lede": "Every number in one place, checked against the source. For explanations, follow the links.", "checked": "21 October 2026"}-->
+<h2>The box</h2>
+<table>
+<thead><tr><th>Setting</th><th><code>stdlib</code> (default)</th><th><code>data</code></th></tr></thead>
+<tbody>
+<tr><td>Image</td><td><code>python@sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f</code>, linux/arm64, never pulled at run time</td><td>Built once by <code>pybox setup --with data</code> from that image plus hash-locked numpy 2.5.4, pandas 3.0.6, matplotlib 3.11.2 and their dependencies (<code>pybox/images/data.lock</code>). Your own images (<code>pybox image build</code>) get the same limits. Each is checked against its recorded image ID and recipe SHA-256 before every run</td></tr>
+<tr><td>Memory (and memory + swap)</td><td>128 MiB</td><td>512 MiB</td></tr>
+<tr><td>Processes</td><td>32</td><td>64</td></tr>
+<tr><td>CPU</td><td>0.5 core (a rate: about 1 CPU-second in 2 s)</td><td>1 core</td></tr>
+<tr><td>First process</td><td colspan="2"><code>timeout -s KILL &lt;timeout_s + 1&gt; python -I -B -u -</code>; for runs that move files, <code>… python -I -B -u -c &lt;fixed helper&gt;</code></td></tr>
+<tr><td>User</td><td colspan="2">10000:10000, all capabilities dropped, no-new-privileges, default seccomp</td></tr>
+<tr><td>Files</td><td colspan="2">Read-only root; <code>/tmp</code> 16 MiB (64 MiB for runs that move files), no executables, no device files; no mounts</td></tr>
+<tr><td>Network</td><td colspan="2">None</td></tr>
+<tr><td>Open files</td><td colspan="2">128</td></tr>
+<tr><td>Logs</td><td>Engine logging disabled</td></tr>
+</tbody>
+</table>
+
+<h2>Time</h2>
+<table>
+<thead><tr><th>Budget</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Mac deadline</td><td>up to 30 s (default 2)</td></tr>
+<tr><td>Box timer</td><td>Mac deadline + 1 s</td></tr>
+<tr><td>Create / start / inspect / query / stop / remove</td><td>5 / the run's deadline (at least 2) / 2 / 2 / 2 / 3 s</td></tr>
+<tr><td>Whole cleanup</td><td>15 s (one retry after an interruption gets another 15 s)</td></tr>
+<tr><td>Box expiry label</td><td>120 s after the run's identity is created</td></tr>
+<tr><td>Settling an unconfirmed run</td><td>allowed from expiry + 60 s</td></tr>
+<tr><td>Kernel watcher</td><td>must be ready within 1 s; 64 samples, 0.05 s apart for the first second, then spread over a longer run; runs at most the deadline + 4 s (at least 6 s); reached by checked direct <code>ssh</code>, or <code>colima ssh</code> as a fallback</td></tr>
+<tr><td>Final-reading pause (opt-in runs)</td><td>0.12 s, or one sampling gap plus 0.07 s above 2 s; never past the deadline</td></tr>
+<tr><td>MCP supervisor</td><td>45 s at a 2 s ceiling; above that, the engine's worst case plus 5 s</td></tr>
+</tbody>
+</table>
+
+<h2>Sizes</h2>
+<table>
+<thead><tr><th>What</th><th>CLI and Python</th><th>MCP</th></tr></thead>
+<tbody>
+<tr><td>Program source</td><td>65,536 bytes</td><td>65,536 bytes</td></tr>
+<tr><td>Output kept per stream</td><td>1–65,536 bytes (default 65,536)</td><td>1–8,192 bytes (default 4,096)</td></tr>
+<tr><td>Files in</td><td>64 files, 8 MiB in total</td><td>16 files, 256 KiB in total</td></tr>
+<tr><td>Files back</td><td>64 files, 8 MiB in total</td><td>Listed in full; 48 KiB of contents</td></tr>
+<tr><td>Receipt delivered</td><td>—</td><td>64 KiB (output trimmed and flagged to fit)</td></tr>
+<tr><td>Incoming message / response</td><td>—</td><td>512 KiB / 256 KiB</td></tr>
+<tr><td>Calls / messages per session</td><td>—</td><td>32 / 256</td></tr>
+</tbody>
+</table>
+
+<h2>Receipt layout</h2>
+<table>
+<thead><tr><th>Key</th><th>Contents</th></tr></thead>
+<tbody>
+<tr><td><code>schema_version</code></td><td><code>1</code></td></tr>
+<tr><td><code>identity</code>, <code>container_id</code>, <code>submission.source_sha256</code></td><td>Which run, which box, which program</td></tr>
+<tr><td><code>configured</code></td><td>What was asked for</td></tr>
+<tr><td><code>observed</code></td><td><code>policy_verified_before_start</code>, <code>effective_policy</code>, <code>engine_state</code>, <code>resources</code>, <code>termination</code></td></tr>
+<tr><td><code>capture</code></td><td><code>stdout</code>, <code>stderr</code>, <code>output_complete</code>, <code>*_truncated</code>: untrusted</td></tr>
+<tr><td><code>lifecycle</code></td><td><code>last_phase</code>, <code>cancelled</code>, <code>timeouts</code>, timing</td></tr>
+<tr><td><code>cleanup</code></td><td><code>status</code>, <code>removed</code>, reconciliation summary</td></tr>
+<tr><td><code>clock_domains</code>, <code>unknown</code></td><td>Which clock each time uses; what can't be known</td></tr>
+<tr><td><code>files</code></td><td>For runs that move files: inputs and outputs (name, bytes, SHA-256), anything skipped, transfer errors. <code>null</code> otherwise</td></tr>
+<tr><td><code>explanations</code></td><td>Evidence-tagged reasons (<a href="receipt.html#explanation-codes">codes</a>)</td></tr>
+</tbody>
+</table>
+
+<h2>Files PyBox creates</h2>
+<table>
+<thead><tr><th>Path</th><th>What it is</th></tr></thead>
+<tbody>
+<tr><td><code>~/.pybox/runtime/</code></td><td>Everything PyBox owns. Private to you (0700)</td></tr>
+<tr><td><code>…/colima/</code></td><td>The private VM profile <code>pybox</code> and its disk</td></tr>
+<tr><td><code>…/colima/_lima/_config/override.yaml</code></td><td>Turns off port forwarding for this VM</td></tr>
+<tr><td><code>…/docker/config.json</code></td><td>An anonymous Docker config with no stored credentials</td></tr>
+<tr><td><code>…/installation.json</code></td><td>This installation's random owner ID, used to label boxes</td></tr>
+<tr><td><code>…/images.json</code>, <code>…/images.lock</code></td><td>IDs and recipe fingerprints of locally built images (private, written only by setup and <code>pybox image</code>, one at a time)</td></tr>
+<tr><td><code>…/recipes/NAME.lock</code></td><td>The saved, normalized lock file of each image you built</td></tr>
+<tr><td><code>…/attempts/</code></td><td>Notes written before each box is built</td></tr>
+<tr><td><code>…/lifecycle.lock</code></td><td>Lets one run in at a time</td></tr>
+</tbody>
+</table>
+
+<h2>Requirements</h2>
+<ul>
+<li>macOS on Apple Silicon (arm64). Anything else is refused.</li>
+<li>Python 3.11 or newer. On older versions some timestamps can't be read and labels fall back to <code>UNKNOWN</code>.</li>
+<li><code>colima</code> and <code>docker</code> from <code>/opt/homebrew/bin</code> or <code>/usr/local/bin</code> only. <code>$PATH</code> is never searched, and the binaries must not be writable by other users.</li>
+</ul>
+
+<h2>Source map</h2>
+<table>
+<thead><tr><th>File</th><th>Responsibility</th></tr></thead>
+<tbody>
+<tr><td><code>pybox/container.py</code></td><td>Paths, guards, rules, the run lifecycle, cleanup</td></tr>
+<tr><td><code>pybox/runtime_setup.py</code></td><td><code>setup</code>, <code>vm</code>, <code>doctor</code></td></tr>
+<tr><td><code>pybox/_observe.sh</code>, <code>observation.py</code></td><td>The kernel watcher and its strict parser</td></tr>
+<tr><td><code>pybox/inspection.py</code></td><td>The receipt</td></tr>
+<tr><td><code>pybox/mcp.py</code>, <code>mcp_policy.py</code></td><td>The MCP server and its limits</td></tr>
+<tr><td><code>pybox/repair.py</code>, <code>nim.py</code></td><td>The AI repair loop and its model client</td></tr>
+<tr><td><code>pybox/runner.py</code></td><td>The unsealed learning runner</td></tr>
+</tbody>
+</table>

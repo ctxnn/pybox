@@ -1,0 +1,74 @@
+<!--meta {"title": "Run code you don't trust, with a receipt", "description": "PyBox runs a Python program in a sealed, throwaway box on your Mac and tells you what happened, and how it knows.", "layout": "home", "assets": ["walkthrough.css", "walkthrough.js"]}-->
+<div class="wrap">
+<section class="hero" aria-label="Introduction">
+<div class="hero-copy">
+<p class="kicker">PyBox · research prototype for Apple Silicon Macs</p>
+<p class="hero-line">Run Python you don't trust, and get a receipt for what it did.</p>
+<p class="hero-lede">Each program runs once, in a fresh box on your Mac: no access to your files, no network, a two-second limit. Afterwards you get a record of what happened, and every line says where it came from.</p>
+<div class="actions">
+<a class="button primary" href="install.html">Install</a>
+<a class="button secondary" href="how-it-works.html">How it works</a>
+</div>
+</div>
+<figure class="annotated" aria-label="A receipt from a recorded run, with each line's source labelled">
+<figcaption class="annotated-cap">A real run, recorded 19 October 2026. The program tried to read a file that exists on the Mac.</figcaption>
+<div class="annotated-grid">
+<div class="receipt">
+<div class="receipt-head"><b>PyBox receipt</b><span>run 8f3a · 0.054 s</span></div>
+<div class="group engine">
+<div class="row"><span>Exit code</span><span>0</span></div>
+<div class="row"><span>Mac folders shared</span><span>none</span></div>
+<div class="row"><span>Network</span><span>none</span></div>
+<div class="row"><span>Box removed</span><span>confirmed</span></div>
+</div>
+<div class="group kernel">
+<div class="row"><span>Memory peak</span><span>4.3 of 128 MiB</span></div>
+<div class="row"><span>Processes</span><span>6 of 32</span></div>
+</div>
+<div class="group said">
+<div class="row"><span>Printed</span><span>[2, null]</span></div>
+</div>
+<div class="group unknown">
+<div class="row"><span>Final memory</span><span>unknown</span></div>
+</div>
+</div>
+<ol class="notes">
+<li class="engine"><b>From the container engine</b><span>Checked before the program started, and read back after it ended.</span></li>
+<li class="kernel"><b>From the Linux kernel</b><span>Sampled while it ran, by a watcher outside the box.</span></li>
+<li class="said"><b>From the program itself</b><span>Untrusted. Here it means "no such file, no such setting", but a program can print anything.</span></li>
+<li class="unknown"><b>Not measurable</b><span>The box can vanish between two readings, so the last value seen is not called final.</span></li>
+</ol>
+</div>
+</figure>
+</section>
+</div>
+
+<section class="section" id="walkthrough">
+<div class="wrap">
+<div class="section-head"><h2>One run, step by step</h2><p>Ninety seconds, from handing PyBox a program to reading its receipt, including what happens when PyBox itself is killed mid-run.</p></div>
+<div class="wt" data-walkthrough data-video="assets/how-pybox-works.mp4" data-audio="assets/how-pybox-works.m4a"></div>
+</div>
+</section>
+
+<section class="section">
+<div class="wrap split">
+<div class="section-head">
+<h2>Try it</h2>
+<p>Python 3.11 or newer and <code>brew install colima docker</code>. PyBox has no other dependencies. <code>pybox setup</code> shows what it will create before it creates anything.</p>
+<p class="links"><a href="install.html">Install guide</a><a href="files.html">Files in and out</a><a href="packages.html">numpy and pandas</a><a href="mcp.html">Use with Claude Code</a></p>
+</div>
+<figure class="code"><figcaption>Terminal</figcaption><pre><span class="p">$ </span>pipx install pybox-sandbox
+<span class="p">$ </span>pybox setup --yes
+<span class="p">$ </span>pybox vm start
+<span class="p">$ </span>pybox exec report.py --input sales.csv --output results/
+<span class="p">$ </span>claude mcp add pybox -- pybox mcp</pre></figure>
+</div>
+</section>
+
+<section class="section">
+<div class="wrap">
+<div class="limits">
+<p><b>What the evidence covers.</b> 13 restriction checks, 9 resource checks, a crash test, 13 MCP protocol checks, 8 AI repair sessions, 15 live checks of images, files and longer runs, and a Claude Code session, all recorded on the machine PyBox was built on. It is not a sandbox approved for hostile code, it has not yet been set up on a second Mac, and its timers assume a healthy VM. <a href="evidence.html">Read the evidence</a></p>
+</div>
+</div>
+</section>

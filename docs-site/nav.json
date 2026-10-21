@@ -1,0 +1,43 @@
+{
+  "sections": [
+    {
+      "title": "Getting started",
+      "pages": [
+        "introduction",
+        "install",
+        "first-run"
+      ]
+    },
+    {
+      "title": "Concepts",
+      "pages": [
+        "how-it-works",
+        "sealed-box",
+        "deadlines",
+        "receipt",
+        "cleanup"
+      ]
+    },
+    {
+      "title": "Use it",
+      "pages": [
+        "cli",
+        "files",
+        "packages",
+        "python",
+        "mcp",
+        "ai-repair"
+      ]
+    },
+    {
+      "title": "More",
+      "pages": [
+        "reference",
+        "performance",
+        "evidence",
+        "troubleshooting",
+        "faq"
+      ]
+    }
+  ]
+}

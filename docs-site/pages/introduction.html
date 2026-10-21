@@ -1,0 +1,39 @@
+<!--meta {"title": "Introduction", "description": "What PyBox is, who it is for, and what it does and does not promise.", "lede": "PyBox runs a Python program you don't trust inside a sealed, throwaway box on your Mac, then hands you a receipt: what the program did, what it printed, and what PyBox could not confirm."}-->
+<h2>The problem</h2>
+<p>Someone sends you a script. An AI assistant writes some code. A tutorial says "just run this". The code might be fine. It might also read your files, phone home, or never stop. Reading it carefully helps, but you can't always tell by looking.</p>
+<p>The usual answer is "run it somewhere safe". That raises two more questions that rarely get a straight answer: <em>how</em> safe, and <em>how do you know</em> what actually happened in there?</p>
+
+<h2>What PyBox does</h2>
+<ol class="steps">
+<li><strong>Builds a fresh, sealed box.</strong> Every run gets a brand-new Linux container inside a private virtual machine on your Mac. The program can't see your files, can't reach the internet, gets 128 MB of memory and half a CPU core, and is stopped after 2 seconds. When a job needs more, you can ask for numpy and pandas, up to 30 seconds, and copies of files in and out, all shown on the receipt.</li>
+<li><strong>Checks the seal before starting.</strong> PyBox reads the box's settings back from the container engine and refuses to start the program if anything differs from the fixed policy.</li>
+<li><strong>Stops the program even if PyBox crashes.</strong> A timer inside the box ends the program one second after PyBox's own deadline, so a crashed or killed PyBox can't leave a program running.</li>
+<li><strong>Writes you a receipt.</strong> It records what it asked for, what the engine and the Linux kernel actually observed, what the program printed (clearly marked as untrusted), and what it still doesn't know.</li>
+<li><strong>Cleans up, carefully.</strong> It removes the box and then confirms it is gone. It never sweeps away anything it can't prove is its own.</li>
+</ol>
+
+<h2>Who it's for</h2>
+<div class="cards">
+<a class="card" href="first-run.html"><b>Developers</b><span>Run untrusted Python from the terminal or from your own Python code, and get a structured record back.</span></a>
+<a class="card" href="mcp.html"><b>AI agent builders</b><span>Give an agent one safe tool, <code>run_python</code>. The program's output always comes back as data, never as instructions.</span></a>
+<a class="card" href="how-it-works.html"><b>The curious</b><span>Watch a run step by step. PyBox started as a project to learn exactly what happens between "run this" and "here's the result".</span></a>
+</div>
+
+<h2>What makes it different</h2>
+<p>Most tools tell you a program "succeeded" or "failed". PyBox keeps four kinds of fact apart, because mixing them is how people end up trusting the wrong thing:</p>
+<table>
+<thead><tr><th>Kind of fact</th><th>Example</th><th>Where it comes from</th></tr></thead>
+<tbody>
+<tr><td>What PyBox asked for</td><td>128 MB of memory, no network</td><td>PyBox's fixed settings</td></tr>
+<tr><td>What was actually seen</td><td>The program exited with code 0; the kernel counted one out-of-memory kill</td><td>The container engine and the Linux kernel</td></tr>
+<tr><td>What the program said</td><td>"all done!"</td><td>The program itself, so it's <strong>untrusted</strong></td></tr>
+<tr><td>What isn't known</td><td>The exact final memory count</td><td>Stated openly, never guessed</td></tr>
+</tbody>
+</table>
+<p>That last row matters. A program can exit with code 0 even though part of it was killed for using too much memory. PyBox has recorded exactly that, and its receipt shows both facts instead of picking one. See <a href="evidence.html">the evidence</a>.</p>
+
+<h2>Where it stands today</h2>
+<div class="callout limit">
+<p><strong>Research prototype, Apple Silicon Macs only.</strong> PyBox has been carefully tested on one machine, with dated, recorded evidence for every claim on this site. The setup that lets anyone build the sealed box on their own Mac has been run from scratch in a fresh installation (21 October 2026, on the same Mac), but not yet on a second Mac. It is not a hosted service, and it isn't approved for running hostile code from the public internet.</p>
+<!--/callout--></div>
+<p>Ready? <a href="install.html">Install PyBox</a>, or <a href="how-it-works.html">watch how a run works</a> first.</p>

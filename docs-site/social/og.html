@@ -1,0 +1,37 @@
+<!doctype html>
+<!-- The social preview image (1200×630). render_images.mjs screenshots this into assets/og.png. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #eceef2; }
+  .og { display: grid; grid-template-columns: 1fr 430px; gap: 64px; align-items: center; height: 630px; padding: 0 80px; box-sizing: border-box; border-top: 6px solid var(--accent); }
+  .brand { display: flex; align-items: center; gap: 12px; font: 600 26px var(--font); color: var(--text); }
+  .brand svg { width: 34px; height: 34px; }
+  h1 { margin: 44px 0 22px; font: 600 50px/1.12 var(--font); letter-spacing: -.025em; color: var(--text); }
+  p { margin: 0; font: 400 22px/1.45 var(--font); color: var(--text-2); }
+  .receipt { max-width: none; font-size: 17px; padding: 34px 30px 28px; }
+  .receipt-head b { font-size: 17px; }
+</style>
+</head>
+<body>
+<div class="og">
+  <div>
+    <div class="brand"><svg viewBox="0 0 22 22" aria-hidden="true"><rect x="1.5" y="1.5" width="19" height="19" rx="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6.8 11.4l2.8 2.8 5.7-6.1" fill="none" style="stroke:var(--accent)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>PyBox</div>
+    <h1>Run Python you don't trust, and get a receipt for what it did.</h1>
+    <p>A fresh, sealed box on your Mac for every run. No files, no network, two seconds.</p>
+  </div>
+  <div class="receipt">
+    <div class="receipt-head"><b>PyBox receipt</b><span>recorded run · 0.054 s</span></div>
+    <div class="row"><span>Exit code</span><span>0</span></div>
+    <div class="row"><span>Mac folders shared</span><span>none</span></div>
+    <div class="row"><span>Network</span><span>none</span></div>
+    <div class="row"><span>Memory peak</span><span>4.3 of 128 MiB</span></div>
+    <div class="row"><span>Box removed</span><span class="yes">confirmed</span></div>
+    <div class="block"><span class="dim">It printed (untrusted)</span><br><span class="said">[2, null]</span></div>
+  </div>
+</div>
+</body>
+</html>

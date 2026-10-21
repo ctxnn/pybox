@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+# Installed as `pybox-sandbox` (the name `pybox` is taken on PyPI); the command and import stay `pybox`.
+name = "pybox-sandbox"
+version = "0.3.0"
+description = "Run Python you don't trust in a fresh, sealed box on your Mac, and get a receipt for what it did. Works with AI agents over MCP."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "ctxnn" }]
+keywords = ["sandbox", "python", "mcp", "ai-agents", "code-execution", "colima", "docker", "macos"]
+dependencies = []
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Software Development :: Interpreters",
+]
+
+[project.urls]
+Homepage = "https://ctxnn.github.io/pybox"
+Documentation = "https://ctxnn.github.io/pybox/introduction.html"
+Source = "https://github.com/ctxnn/pybox"
+Issues = "https://github.com/ctxnn/pybox/issues"
+Changelog = "https://github.com/ctxnn/pybox/blob/main/CHANGELOG.md"
+
+[project.scripts]
+pybox = "pybox.__main__:main"
+
+[tool.setuptools]
+packages = ["pybox", "pybox.images"]
+
+[tool.setuptools.package-data]
+pybox = ["_observe.sh"]
+"pybox.images" = ["*.lock"]

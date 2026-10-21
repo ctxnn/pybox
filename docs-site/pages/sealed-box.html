@@ -1,0 +1,54 @@
+<!--meta {"title": "The sealed box", "description": "Exactly what a program inside PyBox can and cannot do, how each protection was tested, and where the limits are.", "lede": "Every run gets a brand-new box with the same fixed rules. The program can't change them, and PyBox checks them before the program starts."}-->
+<h2>Where the box lives</h2>
+<p>PyBox keeps a small private Linux virtual machine on your Mac, called <code>pybox</code>. Inside it, every run gets a fresh <strong>container</strong>, the "box". Your Mac talks to the VM through a private channel that only PyBox uses. The program in the box gets its source code in and its output out, and nothing else.</p>
+<table>
+<thead><tr><th>Place</th><th>What's there</th><th>Trusted?</th></tr></thead>
+<tbody>
+<tr><td>Your Mac</td><td>PyBox itself: the supervisor that decides everything</td><td>Yes</td></tr>
+<tr><td>The private VM</td><td>The container engine, and a small watcher that reads the box's counters</td><td>Yes, but kept separate from the program</td></tr>
+<tr><td>The box</td><td>Your program, and a timer that stops it</td><td><strong>No.</strong> Everything it says is treated as untrusted</td></tr>
+</tbody>
+</table>
+
+<h2>The rules</h2>
+<table>
+<thead><tr><th>Rule</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>No folders from your Mac</td><td>Your files simply aren't in the box</td></tr>
+<tr><td>No internet</td><td>No network connection of any kind</td></tr>
+<tr><td>Read-only system</td><td>It can't change the box's own files, only a small scratch area</td></tr>
+<tr><td>Not an administrator</td><td>Runs as an ordinary user with every special permission removed</td></tr>
+<tr><td>Limited memory</td><td>128 MiB, with no extra swap</td></tr>
+<tr><td>Limited processes</td><td>At most 32 at once, including PyBox's own two</td></tr>
+<tr><td>Limited CPU</td><td>Half of one core. It slows the program down; it doesn't stop it</td></tr>
+<tr><td>Limited open files</td><td>128 at a time</td></tr>
+<tr><td>A time limit</td><td>2 seconds by default (up to 30 if you ask), plus a backup timer inside the box</td></tr>
+<tr><td>A fixed image</td><td>Always the same Python, pinned by its fingerprint, never downloaded at run time</td></tr>
+</tbody>
+</table>
+<p>The exact engine settings are listed in the <a href="reference.html#the-box">Reference</a>.</p>
+<p>None of these can be changed by the program or by whoever sends it. A caller can only choose from fixed options: the time limit (up to 30 s; for MCP, up to what the server allows), how much output to keep, the <a href="packages.html"><code>data</code> image</a>, whose own limits are 512 MiB, 64 processes and one CPU, and <a href="files.html">copies of files in and out</a>. Each choice is verified like every other setting and recorded on the receipt.</p>
+
+<h2>Checked before the program starts</h2>
+<p>A setting you asked for isn't the same as a setting you got. After creating the box, PyBox asks the container engine to describe it and compares every rule above with what the engine reports. If anything differs, the box is removed and <strong>the program never starts</strong>. The receipt records whether this check passed: <code>"policy_verified_before_start": true</code>.</p>
+
+<h2>Each protection was tested twice</h2>
+<p>A failed action proves little on its own. A write can fail for many reasons. So most protections were tested in pairs: once with the protection, once with <em>only that one protection removed</em>. Thirteen restriction checks were recorded on 19 October 2026. Some of them:</p>
+<table>
+<thead><tr><th>Check</th><th>With the protection</th><th>With only that protection removed</th></tr></thead>
+<tbody>
+<tr><td>Write to a system folder</td><td>Refused (read-only)</td><td>Allowed</td></tr>
+<tr><td>Write 17 MB to scratch</td><td>Stopped at 16 MB</td><td>Fit in a 20 MB scratch</td></tr>
+<tr><td>Change a file's owner, as admin with permissions dropped</td><td>Refused</td><td>Allowed with just that one permission added back</td></tr>
+<tr><td>Open a network connection or look up a name</td><td>Unreachable</td><td>Reached a private test server</td></tr>
+<tr><td>Signal the timer (the box's first process) to stop or pause</td><td>Timer still fired at 3.03 s</td><td>—</td></tr>
+</tbody>
+</table>
+<p>A summary of all of them is on the <a href="evidence.html">evidence page</a>.</p>
+
+<div class="callout warn">
+<p><strong>What this doesn't prove.</strong> Thirteen checks show these specific cases work. They don't prove the box resists every possible attack. Nobody can prove that with a finite list. PyBox is a local research prototype, not a sandbox approved for hostile code from the public internet.</p>
+<!--/callout--></div>
+
+<h2>The other runner: not sealed</h2>
+<p>PyBox also includes a <strong>native learning runner</strong> (<code>pybox run --unsafe-local</code>). It's part of the project's history: it shows how a parent process supervises a child. It runs the program <em>on your Mac with your permissions</em>. It's never used for MCP or AI, never used as a fallback, and you should only use it for code you wrote yourself.</p>

@@ -1,0 +1,60 @@
+<!--meta {"title": "The receipt", "description": "How to read PyBox's inspection record: what was asked for, what was observed, what the program said, and what is unknown.", "lede": "Every run returns the same versioned record. Its job is to tell you not just what happened, but how PyBox knows it, and what it doesn't know."}-->
+<h2>Four kinds of fact</h2>
+<p>The receipt (formally, the <em>inspection record</em>, schema version 1) is organized by <strong>where each fact came from</strong>, because that's what decides how much you can trust it.</p>
+<table>
+<thead><tr><th>Section</th><th>What's in it</th><th>Trust it?</th></tr></thead>
+<tbody>
+<tr><td><code>configured</code></td><td>What PyBox asked for: limits, image, user, network</td><td>It's a request, not proof</td></tr>
+<tr><td><code>observed</code></td><td>What the container engine reported, plus counters from the Linux kernel</td><td>Yes. Independent of the program</td></tr>
+<tr><td><code>capture</code></td><td>What the program printed</td><td><strong>No.</strong> A program can print anything</td></tr>
+<tr><td><code>unknown</code></td><td>What can't be determined from this run</td><td>Always present, never guessed away</td></tr>
+</tbody>
+</table>
+<p>Two more sections describe PyBox's own actions: <code>lifecycle</code> (which deadlines fired, whether you cancelled) and <code>cleanup</code> (whether the box is confirmed gone). For runs that move files, <code>files</code> lists what went in and came back, with sizes and SHA-256s. Returned files count as the program's word, like stdout.</p>
+<p><code>pybox exec</code> prints a short view of this record in the terminal, grouped the same way: from the engine, from the kernel, from the program, and not known. <code>pybox exec --json</code> prints the record itself.</p>
+
+<h2>Why "the program said" is kept apart</h2>
+<p>Imagine a program that prints <code>All tests passed!</code> and exits with code 0, while a child process it started was killed for using too much memory. PyBox recorded exactly that situation. The receipt shows the exit code 0 from the engine, the engine's own out-of-memory flag, <em>and</em> the kernel's count of one out-of-memory kill, side by side. Reading only the exit code, or only the output, would have told you the wrong story.</p>
+<p>Output is also capped (64 KiB per stream by default; 1–8,192 bytes per stream over MCP) and marked when it was cut short.</p>
+
+<h2>The fields you'll use most</h2>
+<table>
+<thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>observed.policy_verified_before_start</code></td><td><code>true</code> if every rule was read back and matched before the program started</td></tr>
+<tr><td><code>observed.engine_state.ExitCode</code></td><td>The program's exit code, from the engine</td></tr>
+<tr><td><code>observed.engine_state.OOMKilled</code></td><td>The engine says the box ran out of memory</td></tr>
+<tr><td><code>observed.resources.metrics</code></td><td>Kernel counters (memory, processes, CPU): first, last and largest values seen</td></tr>
+<tr><td><code>observed.termination.mechanism</code></td><td>Why it ended, only when PyBox has evidence (<a href="deadlines.html#what-the-receipt-says-about-it">labels</a>)</td></tr>
+<tr><td><code>capture.stdout</code>, <code>capture.stderr</code></td><td>The program's output: <strong>untrusted</strong></td></tr>
+<tr><td><code>capture.stdout_truncated</code></td><td>Output was longer than the cap and the rest was dropped</td></tr>
+<tr><td><code>lifecycle.timeouts</code></td><td>Which deadline fired, e.g. <code>["wall"]</code></td></tr>
+<tr><td><code>cleanup.status</code></td><td><code>REMOVED</code> when the box was removed <em>and</em> confirmed gone (<a href="cleanup.html#what-the-statuses-mean">all statuses</a>)</td></tr>
+<tr><td><code>explanations</code></td><td>Short, evidence-tagged reasons, e.g. <code>OOM_KILL_COUNTER_OBSERVED</code></td></tr>
+</tbody>
+</table>
+
+<h2>What's always unknown</h2>
+<ul>
+<li><strong>Final resource counters.</strong> The watcher reads the counters while the program runs, but the box can disappear between two reads. The receipt gives the last value it actually saw and says the final value is unknown.</li>
+<li><strong>The exact cause of termination.</strong> Even a well-supported label is narrower than proof. A program could, in principle, kill itself at the exact moment a timer would have.</li>
+<li><strong>Clock alignment.</strong> Your Mac, the container engine and the kernel each keep their own clock. PyBox never pretends they line up exactly.</li>
+</ul>
+
+<h2>Explanation codes</h2>
+<table>
+<thead><tr><th>Code</th><th>Evidence behind it</th></tr></thead>
+<tbody>
+<tr><td><code>TARGET_EXIT_OBSERVED</code></td><td>The engine's final state</td></tr>
+<tr><td><code>DEADLINE_REACHED</code></td><td>PyBox's own clocks</td></tr>
+<tr><td><code>SUPERVISOR_KILL_ATTEMPTED</code></td><td>PyBox's recorded stop command</td></tr>
+<tr><td><code>OOM_REPORTED_BY_ENGINE</code></td><td>The engine's out-of-memory flag</td></tr>
+<tr><td><code>OOM_KILL_COUNTER_OBSERVED</code></td><td>The kernel's memory event counter</td></tr>
+<tr><td><code>TASK_LIMIT_EVENT_OBSERVED</code></td><td>The kernel's process-limit counter</td></tr>
+<tr><td><code>CPU_THROTTLING_OBSERVED</code></td><td>The kernel's CPU counter (slowing down, not stopping)</td></tr>
+<tr><td><code>CANCELLED</code></td><td>You interrupted the run</td></tr>
+<tr><td><code>RUNNER_ERROR</code></td><td>Something in PyBox itself went wrong; read the detail</td></tr>
+<tr><td><code>COUNTERS_UNAVAILABLE</code></td><td>The watcher couldn't collect counters</td></tr>
+<tr><td><code>POLICY_NOT_VERIFIED_BEFORE_START</code></td><td>The rules weren't confirmed, so the program didn't start</td></tr>
+</tbody>
+</table>

@@ -1,0 +1,95 @@
+<!--meta {"title": "Command line", "description": "Every pybox command, its options and its exit codes.", "lede": "Most days you'll use three commands: pybox vm start, pybox exec, pybox vm stop.", "checked": "21 October 2026"}-->
+<h2>Commands</h2>
+<table>
+<thead><tr><th>Command</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>pybox exec FILE</code></td><td>Runs a Python file (or <code>-</code> for standard input) in a fresh sealed box. Prints the program's output, then a short receipt</td></tr>
+<tr><td><code>pybox setup [--yes] [--with data]</code></td><td>Builds the sealed box, and optionally the <a href="packages.html">data image</a>. Shows its plan unless you add <code>--yes</code>. <a href="install.html">Details</a></td></tr>
+<tr><td><code>pybox vm start | stop | status</code></td><td>Runs or stops PyBox's private VM. <code>start</code> checks the VM's settings and stops it again if anything is off</td></tr>
+<tr><td><code>pybox image build NAME --lock FILE</code>, <code>image list</code>, <code>image rm NAME</code></td><td>Build an image with your own pinned packages, list images, remove one. <a href="packages.html#your-own-packages">Details</a></td></tr>
+<tr><td><code>pybox doctor [--json]</code></td><td>A read-only health check, with the next step for anything that isn't ready</td></tr>
+<tr><td><code>pybox mcp [--max-timeout S] [--images LIST]</code></td><td>Serves the <code>run_python</code> tool to an AI agent. <a href="mcp.html">Details</a></td></tr>
+<tr><td><code>pybox cleanup [--resolve-attempt RUN]</code></td><td>Tidies up expired leftover boxes. <a href="cleanup.html">How it decides</a></td></tr>
+<tr><td><code>pybox container [--inspect]</code></td><td>The original JSON-only interface, kept for scripts written before <code>exec</code></td></tr>
+<tr><td><code>pybox run FILE --unsafe-local</code></td><td>The <strong>unsealed</strong> learning runner, on your Mac with your permissions. Only for your own code</td></tr>
+</tbody>
+</table>
+
+<h2>pybox exec</h2>
+<div class="tabs">
+<div class="tab-panel" data-label="A file">
+<figure class="code"><pre><span class="p">$ </span>pybox exec script.py</pre></figure>
+</div>
+<div class="tab-panel" data-label="Inline">
+<figure class="code"><pre><span class="p">$ </span>echo 'print(sum(range(10)))' | pybox exec -</pre></figure>
+</div>
+<div class="tab-panel" data-label="Data and files">
+<figure class="code"><pre><span class="p">$ </span>pybox exec report.py --image data --timeout 20 --input sales.csv --output results/</pre></figure>
+</div>
+<div class="tab-panel" data-label="For scripts">
+<figure class="code"><pre><span class="p">$ </span>pybox exec script.py --json | jq .observed.engine_state.ExitCode</pre></figure>
+</div>
+</div>
+<p>The program's output goes to standard output and standard error as usual, so you can pipe it. The receipt goes to standard error, after the program's output:</p>
+<figure class="code"><figcaption>Recorded 21 October 2026</figcaption><pre><span class="p">$ </span>echo 'print(6*7)' | pybox exec -
+42
+
+PyBox receipt · run 5319e024 · image stdlib · 0.166 s of 2 s
+
+From the container engine  checked before start, read back after
+  Exit code             0 (ended by itself)
+  Settings checked      yes, before the program started
+  Mac folders shared    none
+  Network               none
+  Limits                128 MiB · 32 processes · 0.5 CPU · 2 s (+1 s box timer)
+  Box                   removed and confirmed gone
+
+From the Linux kernel  sampled while it ran, from outside the box
+  Memory peak           2.5 MiB of 128 MiB
+  Processes peak        6 of 32
+  CPU throttled         0 periods
+
+From the program  untrusted: a program can print or write anything
+  Printed               3 bytes on stdout, 0 bytes on stderr
+
+Not known  PyBox says so instead of guessing
+                        final counters (the box can vanish between readings) · exact clock alignment</pre></figure>
+
+<table>
+<thead><tr><th>Option</th><th>Default</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>--image</code></td><td><code>stdlib</code></td><td><code>stdlib</code>, <code>data</code> (numpy, pandas, matplotlib) or one you built. <a href="packages.html">Images</a></td></tr>
+<tr><td><code>--timeout</code></td><td>2</td><td>More than 0, at most 30 seconds</td></tr>
+<tr><td><code>--input PATH</code></td><td>none</td><td>Copy a file or folder in, at <code>/tmp/input/</code>. Repeatable. <a href="files.html">Files</a></td></tr>
+<tr><td><code>--output DIR</code></td><td>none</td><td>Bring back what the program writes to <code>/tmp/output/</code>, into a new or empty folder</td></tr>
+<tr><td><code>--max-output-bytes</code></td><td>65536</td><td>Bytes kept per stream; the rest is drained and dropped</td></tr>
+<tr><td><code>--json</code></td><td>off</td><td>Print only the full <a href="receipt.html">receipt</a> as JSON</td></tr>
+<tr><td><code>-q</code>, <code>--quiet</code></td><td>off</td><td>Print the program's output only, no receipt</td></tr>
+</tbody>
+</table>
+<p>Programs can be up to 65,536 bytes of UTF-8 source. Set <code>NO_COLOR=1</code> to turn off the receipt's bold headings. Anything in the receipt that came from the program is shown with control characters escaped, and on a terminal the receipt starts by resetting colours, so a program can't disguise it.</p>
+
+<h2 id="exit-codes">Exit codes</h2>
+<p>PyBox's own exit code summarizes the run, so scripts can react without parsing JSON. The program's real exit code is always in the receipt.</p>
+<table>
+<thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>0</code></td><td>The program exited 0</td></tr>
+<tr><td><code>1</code></td><td>The program exited with an error (or its exit couldn't be established). For <code>doctor</code>: not ready to run</td></tr>
+<tr><td><code>2</code></td><td>Invalid input (a bad option, an oversized file, a non-empty output folder); for <code>setup</code>, a missing prerequisite or a conflicting file</td></tr>
+<tr><td><code>124</code></td><td>A deadline fired</td></tr>
+<tr><td><code>125</code></td><td>PyBox itself had a problem, e.g. the VM isn't running. The receipt's last section says what</td></tr>
+<tr><td><code>130</code></td><td>You cancelled with Ctrl-C (the box was still cleaned up)</td></tr>
+</tbody>
+</table>
+<p>When several apply, PyBox reports the first of 130, 125, 124.</p>
+
+<h2>pybox container</h2>
+<p>The original interface reads the program from standard input and prints JSON: the receipt with <code>--inspect</code>, or the full raw result without it. It accepts <code>--timeout</code> (up to 30) and <code>--max-output-bytes</code>, but no images or files. Use <code>pybox exec</code> for new work.</p>
+
+<h2>The unsealed learning runner</h2>
+<div class="callout warn">
+<p><strong><code>pybox run</code> is not sealed.</strong> The program runs as you, on your Mac, with access to your files and the network. It exists to teach how process supervision works, and it requires <code>--unsafe-local</code> to remind you. It's never used for MCP or the AI repair loop, and never as a fallback. Use <code>pybox exec</code> for anything you don't fully trust.</p>
+<!--/callout--></div>
+<figure class="code"><pre><span class="p">$ </span>pybox run examples/slow.py --unsafe-local --timeout 0.2</pre></figure>
+<p>Its options: <code>--timeout</code> (up to 60 s), <code>--max-output-bytes</code> (up to 1 MiB per stream), and <code>--cpu-soft-limit N</code>, an experimental CPU-time warning signal that is <em>not</em> a hard cap.</p>

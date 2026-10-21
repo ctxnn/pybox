@@ -1,0 +1,67 @@
+{
+  "label": "REPLAY",
+  "id": "step4-supervisor-kill",
+  "title": "Supervisor SIGKILL while the target runs",
+  "recorded": "2026-10-19 (Step 4)",
+  "note": "Recorded evidence replayed for documentation; not a fresh live execution.",
+  "summary": "The Mac supervisor was killed with signal 9 mid-run. PID 1 was the timeout wrapper; the engine recorded exit 137 about 3.03 s after start, with no engine KILL from any supervisor.",
+  "sources": [
+    {
+      "path": "evidence/raw/pybox-step4-20261019-implementation-01/running/case.json",
+      "sha256": "7081eda45416626d81bc5fc0492963be956cd5e8d2daecf811626aa24ad691c2"
+    },
+    {
+      "path": "evidence/raw/pybox-step4-20261019-implementation-01/running/pid1.json",
+      "sha256": "1283fa6c3b614f35b5389eae7dd833a43a615d944a70bbe0cb74fd37b60e95a5"
+    },
+    {
+      "path": "evidence/raw/pybox-step4-20261019-implementation-01/running-after-kill-13.inspect.json",
+      "sha256": "4a2b5caf37d2c11c7de2462395b8e208ae17430925af3f5a223fd7279f3360a4"
+    },
+    {
+      "path": "evidence/raw/pybox-step4-20261019-implementation-01/running/commands.jsonl",
+      "sha256": "6160c86fb8fc66041581491e6415bdad560ec42e0e6c0271a9966841607d9b49"
+    },
+    {
+      "path": "evidence/raw/pybox-step4-20261019-implementation-01/observer-commands.jsonl",
+      "sha256": "1a7af483661f6de50453e746c219825bb74f430315ac9e97b86679816ad705fd"
+    }
+  ],
+  "payload": {
+    "stage": "source_executed_and_output_read",
+    "supervisor_returncode": -9,
+    "supervisor_kill_utc": "2026-10-19T12:34:16.950789+00:00",
+    "guest_timer_s": 3.0,
+    "pid1_status": {
+      "Name": "timeout",
+      "State": "S (sleeping)",
+      "Pid": "1",
+      "Uid": "10000\t10000\t10000\t10000"
+    },
+    "final_state": {
+      "Dead": false,
+      "Error": "",
+      "ExitCode": 137,
+      "FinishedAt": "2026-10-19T12:34:19.880986588Z",
+      "OOMKilled": false,
+      "Paused": false,
+      "Pid": 0,
+      "Restarting": false,
+      "Running": false,
+      "StartedAt": "2026-10-19T12:34:16.852553879Z",
+      "Status": "exited"
+    },
+    "command_histories": [
+      {
+        "history": "running/commands.jsonl",
+        "commands": 9,
+        "engine_kill_commands": 0
+      },
+      {
+        "history": "observer-commands.jsonl",
+        "commands": 100,
+        "engine_kill_commands": 0
+      }
+    ]
+  }
+}
